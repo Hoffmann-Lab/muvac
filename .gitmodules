@@ -1,0 +1,3 @@
+[submodule "bashbone"]
+	path = bashbone
+	url = https://gitlab.leibniz-fli.de/kriege/bashbone.git
