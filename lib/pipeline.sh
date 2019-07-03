@@ -65,7 +65,8 @@ pipeline::_preprocess(){
 			} || return 1
 		}
 		${NOcor:=true} || {
-			{	preprocess::rcorrector \
+			{	qualdirs+=("$OUTDIR/qualities/corrected")
+				preprocess::rcorrector \
 					-S ${NOcor:=false} \
 					-s ${SKIPcor:=false} \
 					-t $THREADS \
@@ -82,7 +83,7 @@ pipeline::_preprocess(){
 					-2 FASTQ2
 			} || return 1
 		}
-		${NOrrm:=false} || {
+		${NOrrm:=true} || {
 			{	qualdirs+=("$OUTDIR/qualities/rrnafiltered") && \
 				preprocess::sortmerna \
 					-S ${NOrrm:=false} \
@@ -140,28 +141,28 @@ pipeline::_preprocess(){
 
 	{	alignment::postprocess \
 			-S ${nouniq:=false} \
-			-s ${Suniq:=false} \
+			-s ${SKIPuniq:=false} \
 			-j uniqify \
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
 			-r mapper && \
 		alignment::postprocess \
-			-S ${nosort:=false} \
-			-s ${Ssort:=false} \
+			-S ${NOsort:=false} \
+			-s ${SKIPsort:=false} \
 			-j sort \
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
-			-r mapper && \
-		alignment::postprocess \
-			-S ${noidx:=false} \
-			-s ${Sidx:=false} \
-			-j index \
-			-t $THREADS \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped \
 			-r mapper
+		# alignment::postprocess \ <- applied by alignment::slice anyways
+		# 	-S ${NOidx:=false} \
+		# 	-s ${SKIPidx:=false} \
+		# 	-j index \
+		# 	-t $THREADS \
+		# 	-p $TMPDIR \
+		# 	-o $OUTDIR/mapped \
+		# 	-r mapper
 	} || return 1
 
 	return 0
@@ -170,14 +171,14 @@ pipeline::_preprocess(){
 pipeline::_slice(){
 	alignment::slice \
 		-S $sliced \
-		-s $1 \
+		-s $(${SKIPslice:=false} && echo true || echo $1) \
 		-t $THREADS \
 		-m $MEMORY \
 		-r mapper \
 		-c slicesinfo \
 		-p $TMPDIR || return 1
 
-	$1 || sliced=true # i.e. if do NOskip, sliced=true and NOslice=true, else just by SKIPslices slicesinfo will be further updated
+	$1 || sliced=true # i.e. if not skiptool: sliced=true and -S NOslice=true, else just by SKIPslices slicesinfo will be further updated
 
 	return 0
 }
@@ -248,9 +249,14 @@ pipeline::germline() {
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped && \
-		[[ $DBSNP ]] && callvariants::vcfzip -t $THREADS -i $DBSNP || true && \
-		pipeline::_slice $($sliced || ${SKIPbqsr:=false} || ${NObqsr:=false} && echo true || echo false) && \
+			-o $OUTDIR/mapped
+	} || return 1
+
+	if [[ $DBSNP ]]; then
+		callvariants::vcfzip -t $THREADS -i $DBSNP || return 1
+	fi
+
+	{	pipeline::_slice $($sliced || ${SKIPbqsr:=false} || ${NObqsr:=false} && echo true || echo false) && \
 		alignment::bqsr \
 			-S ${NObqsr:=false} \
 			-s ${SKIPbqsr:=false} \
@@ -262,14 +268,18 @@ pipeline::germline() {
 			-c slicesinfo \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped && \
-		alignment::postprocess \
-			-S ${NOidx:=false} \
-			-s ${SKIPidx:=false} \
-			-j index \
+		pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
+		callvariants::haplotypecaller \
+			-S ${NOhc:=false} \
+			-s ${SKIPhc:=false} \
 			-t $THREADS \
+			-m $MEMORY \
+			-g $GENOME \
+			-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+			-r mapper \
+			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped \
-			-r mapper
+			-o $OUTDIR/variants
 	} || return 1
 
 	return 0
@@ -358,8 +368,13 @@ pipeline::somatic() {
 			-c slicesinfo \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped
-		[[ $DBSNP ]] && callvariants::vcfzip -t $THREADS -i $DBSNP || true && \
-		pipeline::_slice $($sliced || ${SKIPbqsr:=false} || ${NObqsr:=false} && echo true || echo false) && \
+	} || return 1
+
+	if [[ $DBSNP ]]; then
+		callvariants::vcfzip -t $THREADS -i $DBSNP || return 1
+	fi
+
+	{	pipeline::_slice $($sliced || ${SKIPbqsr:=false} || ${NObqsr:=false} && echo true || echo false) && \
 		alignment::bqsr \
 			-S ${NObqsr:=false} \
 			-s ${SKIPbqsr:=false} \
@@ -370,15 +385,7 @@ pipeline::somatic() {
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped && \
-		alignment::postprocess \
-			-S ${NOidx:=false} \
-			-s ${SKIPidx:=false} \
-			-j index \
-			-t $THREADS \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped \
-			-r mapper
+			-o $OUTDIR/mapped
 	} || return 1
 
 	return 0

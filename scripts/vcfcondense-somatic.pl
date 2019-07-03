@@ -35,7 +35,7 @@ while(<>){
     my @vtr;
     my @vnr;
 
-    for my $k (('GT','COV','MAF','GQ','DP','AD','DP2')) {
+    for my $k (('GT','COV','MAF','GQ','DP','AD','DP4','RSF','ASF')) {
         for (indexes { $_ eq $k } @t){
             push @tr , $t[$_];
             push @vtr , $vt[$_];

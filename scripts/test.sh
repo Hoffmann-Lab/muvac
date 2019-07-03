@@ -33,43 +33,26 @@ map(){
 		-t $THREADS \
 		-g /misc/paras/data/genomes/GRCh37.p13/GRCh37.p13.fa \
 		-1 $MUVAC/latest/muvac/data/test.R1.fastq.gz \
-		-o /ssd/tmp/muvac_test_se \
-		-tmp /ssd/tmp/muvac_test_se \
-		-redo reo \
-		-skip md5
-	exit
-
-	$MUVAC/latest/muvac/muvac.sh \
-		-v 2 \
-		-t $THREADS \
-		-g /misc/paras/data/genomes/GRCh37.p13/GRCh37.p13.fa \
-		-n1 $MUVAC/latest/muvac/data/test.R1.fastq.gz \
-		-t1 $MUVAC/latest/muvac/data/test.R2.fastq.gz \
-		-o /ssd/tmp/muvac_test_pe \
-		-tmp /ssd/tmp/muvac_test_pe \
-		-resume rmd \
-		-skip md5
-	exit
-
-	$MUVAC/latest/muvac/muvac.sh \
-		-v 2 \
-		-t $THREADS \
-		-g /misc/paras/data/genomes/GRCh37.p13/GRCh37.p13.fa \
-		-1 $MUVAC/latest/muvac/data/test.R1.fastq.gz \
-		-o /ssd/tmp/muvac_test_se \
-		-tmp /ssd/tmp/muvac_test_se \
-		-resume uniq \
-		-skip md5
-	exit
-	$MUVAC/latest/muvac/muvac.sh \
-		-v 2 \
-		-t $THREADS \
-		-g /misc/paras/data/genomes/GRCh37.p13/GRCh37.p13.fa \
-		-1 $MUVAC/latest/muvac/data/test.R1.fastq.gz \
 		-2 $MUVAC/latest/muvac/data/test.R2.fastq.gz \
 		-o /ssd/tmp/muvac_test_pe \
 		-tmp /ssd/tmp/muvac_test_pe \
-		-redo uniq
+		-resume hc \
+		-skip md5
+	exit
+
+	$MUVAC/latest/muvac/muvac.sh \
+		-v 2 \
+		-t $THREADS \
+		-g /misc/paras/data/genomes/GRCh37.p13/GRCh37.p13.fa \
+		-1 $MUVAC/latest/muvac/data/test.R1.fastq.gz \
+		-o /ssd/tmp/muvac_test_se \
+		-tmp /ssd/tmp/muvac_test_se \
+		-resume hc \
+		-skip md5,slice
+	exit
+
+
+
 }
 echo -n "test mapping? [y|n]: "
 read -r yn

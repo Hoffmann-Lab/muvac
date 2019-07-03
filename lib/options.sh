@@ -58,7 +58,7 @@ options::usage() {
 		-no-clip | --no-clipping            : disables removal of adapter sequences if -a|--adapter is used
 		-no-trim | --no-trimming            : disables quality trimming
 		-cor     | --correction             : enable majority based raw read error correction
-		-no-rrm  | --no-rrnafilter          : disables rRNA filter
+		-rrm     | --rrnafilter             : enable rRNA filter
 		-no-stats| --no-statistics          : disables fastq preprocessing statistics
 
 		ALIGNMENT OPTIONS
@@ -111,7 +111,7 @@ options::developer() {
 		bwa   : BWA mapping
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
-		slice : slicing bams for parallelization of rg,rmd,nsplit,reo,laln,bqsr
+		slice : better dont touch! slicing of bams for parallelization of rg,rmd,nsplit,reo,laln,bqsr
 		rg    : read group modification
 		rmd   : removing duplicates
 		nsplit: splitting split-read alignments
@@ -185,12 +185,12 @@ options::checkopt (){
 		;;
 
 		-cor      | --correction) NOcor=false;;
+		-rrm      | --rrnafilter) NOrrm=false;;
 		-split    | --split) NOsplitreads=false; NOnsplit=false;;
-
+		
 		-no-qual  | --no-qualityanalysis) NOqual=true;;
 		-no-clip  | --no-clipping) NOclip=true;;
-		-no-trim  | --no-trimming) NOtrim=true;;		
-		-no-rrm   | --no-rrnafilter) NOrrm=true;;
+		-no-trim  | --no-trimming) NOtrim=true;;				
 		-no-stats | --no-statistics) NOstats=true;;
 
 		-no-sege  | --no-segemehl) NOsege=true;;

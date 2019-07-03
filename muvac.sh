@@ -1,7 +1,8 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 trap 'die' INT TERM
-trap 'kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
+trap 'sleep 1; kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
+shopt -s extglob
 
 die() {
 	unset CLEANUP
@@ -31,7 +32,6 @@ cleanup() {
 [[ ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -ge 4 ]] || [[ ${BASH_VERSINFO[0]} -gt 4 ]] || die "requieres bash version 4.4 or above"
 [[ ! $MUVAC ]] && die "cannot find installation. please run setup and/or do: export MUVAC=/path/to/install/dir"
 INSDIR=$MUVAC
-shopt -s extglob
 for f in {$INSDIR/latest/bashbone/lib/*.sh,$INSDIR/latest/muvac/lib/*.sh}; do
 	source $f
 done
@@ -50,7 +50,7 @@ DISTANCE=5
 
 options::parse "$@" || die "parameterization issue"
 
-TMPDIR=$TMPDIR/rippchen_tmp
+TMPDIR=$TMPDIR/muvac_tmp
 mkdir -p $OUTDIR || die "cannot access $OUTDIR"
 mkdir -p $TMPDIR || die "cannot access $TMPDIR"
 OUTDIR=$(readlink -e $OUTDIR)
@@ -90,14 +90,14 @@ else
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
 
-commander::print "rippchen started with command: $CMD" | tee $LOG || die "cannot access $LOG"
+commander::print "muvac started with command: $CMD" > $LOG || die "cannot access $LOG"
 progress::log -v $VERBOSITY -o $LOG
 
 if [[ $TFASTQ1 ]]; then
-	pipeline::somatic &>> $LOG || die
+	pipeline::somatic >> $LOG 2> >(tee -a $LOG >&2) || die
 else
-	pipeline::germline &>> $LOG || die
+	pipeline::germline >> $LOG 2> >(tee -a $LOG >&2) || die
 fi
 
-commander::print "success" | tee -a $LOG
+commander::print "success" >> $LOG
 exit 0

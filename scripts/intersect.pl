@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use v5.10;
+use feature ":5.10";
 use Data::Dumper qw(Dumper);
 use List::Util qw(max);
 use List::MoreUtils qw(firstidx any);

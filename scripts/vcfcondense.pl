@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
-use v5.10;
+use feature ":5.10";
 use List::MoreUtils qw(indexes);
 
 my $switch=1;
@@ -17,7 +17,7 @@ while(<>){
     if ($l[0]=~/^#/){
         if ($l[0]=~/^(#+)CHROM/) {
             say "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$caller";
-        } elsif ($l[0]=~/^(#+)INFO=<ID=/) {
+        } elsif ($l[0]=~/^##INFO=/) {
             if ($switch){
                 say $1.'INFO=<ID=CALLER,Number=1,Type=String,Description="Used variant caller">';
                 $switch = 0;
@@ -35,7 +35,7 @@ while(<>){
     my @tr;
     my @vr;
 
-    for my $k (('GT','COV','MAF','GQ','DP','AD','DP2')) {
+    for my $k (('GT','COV','MAF','GQ','DP','AD','DP4','RSF','ASF')) {
         for (indexes { $_ eq $k } @t){
             push @tr , $t[$_];
             push @vr , $v[$_];

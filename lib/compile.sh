@@ -28,7 +28,8 @@ compile::muvac() {
 	shopt -s extglob
 
 	commander::print "installing muvac"
-	{	mkdir -p $insdir/muvac-$version && \
+	{	rm -rf $insdir/muvac-$version && \
+		mkdir -p $insdir/muvac-$version && \
 		cp -r $SRC/!(bashbone|setup*) $insdir/muvac-$version && \
 		mkdir -p $insdir/latest && \
 		ln -sfn $insdir/muvac-$version $insdir/latest/muvac
@@ -41,7 +42,10 @@ compile::upgrade(){
 	local insdir threads
 	compile::_parse -r insdir -s threads "$@" || return 1
 
-	compile::muvac -i "$insdir" -t $threads || return 1
+	{	compile::muvac -i "$insdir" -t $threads && \
+		compile::bashbone -i "$insdir" -t $threads
+	} || return 1
+
 	return 0
 }
 
@@ -73,7 +77,7 @@ compile::conda() {
 		conda install -y --override-channels -c iuc -c bioconda -c main -c conda-forge -c defaults -c quantstack \
 			fastqc trimmomatic rcorrector \
 			star bwa hisat2 \
-			samtools picard bedtools vcflib \
+			samtools picard bedtools vcflib vt \
 			bcftools gatk4 freebayes varscan platypus-variant vardict vardict-java \
 			snpeff snpsift && \
 		chmod 755 $insdir/conda/envs/py2/bin/run_rcorrector.pl && \

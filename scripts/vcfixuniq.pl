@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
-use v5.10;
+use feature ":5.10";
 use List::MoreUtils qw(indexes);
 use List::Util qw(sum);
 

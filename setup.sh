@@ -1,7 +1,8 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 trap 'die' INT TERM
-trap 'kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
+trap 'sleep 1; kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
+shopt -s extglob
 
 die() {
 	echo -ne "\e[0;31m"
