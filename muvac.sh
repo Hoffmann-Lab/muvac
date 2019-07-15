@@ -62,6 +62,7 @@ if [[ $PREVIOUSTMPDIR ]]; then
 	TMPDIR=$(readlink -e $TMPDIR)
 else
 	SKIPslice=false
+	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
 	TMPDIR=$(readlink -e $TMPDIR)
 	TMPDIR=$(mktemp -p $TMPDIR -d --suffix=.muvac) || die "cannot access $TMPDIR"
 fi
