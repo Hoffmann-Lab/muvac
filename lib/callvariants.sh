@@ -102,42 +102,21 @@ callvariants::haplotypecaller() {
 	local minstances mthreads jmem jgct jcgct 
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
-	local m i o slice odir instances ithreads dinstances djmem djgct djcgct
+	local m i o slice odir instances ithreads
 	for m in "${_mapper_bqsr[@]}"; do
 		declare -n _bams_bqsr=$m
 		((instances+=${#_bams_bqsr[@]}))
 	done
-	read -r dinstances ithreads djmem djgct djcgct < <(configure::jvm -i $instances -t 1 -T $threads)
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6
+	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5
 	for m in "${_mapper_bqsr[@]}"; do
 		declare -n _bams_bqsr=$m
 		odir="$outdir/$m"
-        tdir="$tmpdir/$m"
-		mkdir -p "$odir" "$tdir"
+		mkdir -p "$odir"
 
 		for i in "${!_bams_bqsr[@]}"; do
 			tomerge=()
-            o="$(basename "${_bams_bqsr[$i]}")"
-			o="${o%.*}"
-
-			commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
-				ln -sfn "$genome" "$tdir/$o.fa"
-			CMD
-				samtools faidx "$tdir/$o.fa"
-			CMD
-				rm -f "$tdir/$o.dict"
-			CMD
-				picard
-					-Xmx${djmem}m
-					-XX:ParallelGCThreads=$djgct
-					-XX:ConcGCThreads=$djcgct
-					-Djava.io.tmpdir="$tmpdir"
-					CreateSequenceDictionary
-					R="$tdir/$o.fa"
-					VERBOSITY=WARNING
-			CMD
             
 			while read -r slice; do
 				# all alt Phredscaled Likelihoods ordering:
@@ -150,7 +129,7 @@ callvariants::haplotypecaller() {
 				# gatk bug as of v4.1.2.0 --max-reads-per-alignment-start 0 not a valid option
 				# HaplotypeCallerSpark with --spark-master local[$mthreads] is BETA and differs in results!!
 				# Spark does not yet support -D "$dbsnp"
-				commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
+				commander::makecmd -a cmd1 -s '|' -c {COMMANDER[0]}<<- CMD
 					gatk
 						--java-options '
 								-Xmx${jmem}m
@@ -161,7 +140,7 @@ callvariants::haplotypecaller() {
 						HaplotypeCaller
 						-I "$slice"
 						-O "$slice.vcf"
-						-R "$tdir/$o.fa"
+						-R "$genome"
 						-D "$dbsnp"
 						-A Coverage
 						-A DepthPerAlleleBySample
@@ -174,17 +153,17 @@ callvariants::haplotypecaller() {
 						--tmp-dir $tmpdir
 				CMD
 
-				commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD
+				commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
 					vcfix.pl -i "$slice.vcf" > "$slice.fixed.vcf"
 				CMD
 
-				commander::makecmd -a cmd4 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+				commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools norm -f "$genome" -c s -m-both "$slice.fixed.vcf"
 				CMD
 					vcfix.pl -i - > "$slice.fixed.nomulti.vcf"
 				CMD
 
-				commander::makecmd -a cmd5 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				commander::makecmd -a cmd4 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
 					vcffixup "$slice.fixed.nomulti.vcf"
 				CMD
 					vt normalize -q -n -r "$genome" -
@@ -195,33 +174,34 @@ callvariants::haplotypecaller() {
 				tomerge+=("$slice")
 			done < "${_bamslices_bqsr[${_bams_bqsr[$i]}]}"
 
-			o="$odir/$o"
+			o="$odir/$(basename "${_bams_bqsr[$i]}")"
+			o="${o%.*}"
 
-			commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.vcf" "${tomerge[@]/%/.vcf}"
+			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				bcftools concat -o "$o.vcf" $(printf '"%s" ' "${tomerge[@]/%/.vcf}")
 			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.vcf.gz" "${tomerge[@]/%/.vcf}"
+				bcftools concat --threads $ithreads -O z -o "$o.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.vcf}")
 			CMD
 				tabix -f -p vcf "$o.vcf.gz"
 			CMD
-			commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.fixed.vcf" "${tomerge[@]/%/.fixed.vcf}"
+			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				bcftools concat -o "$o.fixed.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.vcf}")
 			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.vcf.gz" "${tomerge[@]/%/.fixed.vcf}"
+				bcftools concat --threads $ithreads -O z -o "$o.fixed.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.vcf}")
 			CMD
 				tabix -f -p vcf "$o.fixed.vcf.gz"
 			CMD
-			commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.fixed.nomulti.vcf" "${tomerge[@]/%/.fixed.nomulti.vcf}"
+			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				bcftools concat -o "$o.fixed.nomulti.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.vcf}")
 			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.vcf.gz" "${tomerge[@]/%/.fixed.nomulti.vcf}"
+				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.vcf}")
 			CMD
 				tabix -f -p vcf "$o.fixed.nomulti.vcf.gz"
 			CMD
-			commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "o.fixed.nomulti.normed.vcf" "${tomerge[@]/%/.fixed.nomulti.normed.vcf}"
+			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				bcftools concat -o "$o.fixed.nomulti.normed.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.normed.vcf}")
 			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.normed.vcf.gz" "${tomerge[@]/%/.fixed.nomulti.normed.vcf}"
+				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.normed.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.normed.vcf}")
 			CMD
 				tabix -f -p vcf "$o.fixed.nomulti.normed.vcf.gz"
 			CMD
@@ -234,14 +214,12 @@ callvariants::haplotypecaller() {
 		commander::printcmd -a cmd3
 		commander::printcmd -a cmd4
 		commander::printcmd -a cmd5
-        commander::printcmd -a cmd6
 	} || {
-		{	commander::runcmd -v -b -t $dinstances -a cmd1 && \
-            commander::runcmd -v -b -t $minstances -a cmd2 && \
+		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
+			commander::runcmd -v -b -t $threads -a cmd2 && \
 			commander::runcmd -v -b -t $threads -a cmd3 && \
 			commander::runcmd -v -b -t $threads -a cmd4 && \
-			commander::runcmd -v -b -t $threads -a cmd5 && \
-			commander::runcmd -v -b -t $instances -a cmd6
+			commander::runcmd -v -b -t $instances -a cmd5
 		} || { 
 			commander::printerr "$funcname failed"
 			return 1

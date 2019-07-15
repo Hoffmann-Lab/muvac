@@ -3,6 +3,7 @@
 trap 'die' INT TERM
 trap 'sleep 1; kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
 shopt -s extglob
+shopt -s expand_aliases
 
 die() {
 	unset CLEANUP
@@ -35,7 +36,10 @@ INSDIR=$MUVAC
 for f in {$INSDIR/latest/bashbone/lib/*.sh,$INSDIR/latest/muvac/lib/*.sh}; do
 	source $f
 done
-configure::environment -i $INSDIR
+export MALLOC_ARENA_MAX=4
+export PATH=$(readlink -e $INSDIR/latest/* | grep -v java | xargs -echo | sed 's/ /:/g'):$PATH #<- avoid loading java 12
+export PATH=$(readlink -e $INSDIR/latest/*/scripts | xargs -echo | sed 's/ /:/g'):$PATH
+# configure::environment -i $INSDIR <- loads java 12 into path with lets gatk4 fail with IncompatibleClassChangeError
 
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
@@ -50,11 +54,18 @@ DISTANCE=5
 
 options::parse "$@" || die "parameterization issue"
 
-TMPDIR=$TMPDIR/muvac_tmp
 mkdir -p $OUTDIR || die "cannot access $OUTDIR"
-mkdir -p $TMPDIR || die "cannot access $TMPDIR"
 OUTDIR=$(readlink -e $OUTDIR)
-TMPDIR=$(readlink -e $TMPDIR)
+if [[ $PREVIOUSTMPDIR ]]; then
+	TMPDIR=$PREVIOUSTMPDIR
+	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
+	TMPDIR=$(readlink -e $TMPDIR)
+else
+	SKIPslice=false
+	TMPDIR=$(readlink -e $TMPDIR)
+	TMPDIR=$(mktemp -p $TMPDIR -d --suffix=.muvac) || die "cannot access $TMPDIR"
+fi
+
 [[ ! $LOG ]] && LOG=$OUTDIR/run.log
 [[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
 [[ $MTHREADS -eq 0 ]] && die "too less memory available ($MAXMEMORY)"
@@ -91,6 +102,7 @@ else
 fi
 
 commander::print "muvac started with command: $CMD" > $LOG || die "cannot access $LOG"
+commander::print "temporary files go to: $TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
 if [[ $TFASTQ1 ]]; then

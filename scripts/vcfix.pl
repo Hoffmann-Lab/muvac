@@ -7,17 +7,24 @@ use List::Util qw(min max sum);
 use Getopt::Long;
 die "option -i|--in is missing" if $#ARGV == -1;
 
+# Possible Types for INFO fields are: Integer, Float, Flag, Character, and String
+# If the field has <X> values value should be <X>.
+# If the field has one value per alternate allele then this value should be ‘A’.
+# If the field has one value for each possible allele (including the reference), then this value should be ‘R’.
+# If the field has one value for each possible genotype then this value should be ‘G’.
+# If the number of possible values varies, is unknown, or is unbounded, then this value should be ‘.’.
+#!!! Number=G dont work for bcftools < v1.9 - better use . instead?
 my %format = (
     GQ => '##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Phred-scaled genotype quality">',
-    PL => '##FORMAT=<ID=PL,Number=.,Type=Float,Description="List of Phred-scaled genotype likelihoods">', #Number=G dont work for bcftools
-    GL => '##FORMAT=<ID=GL,Number=.,Type=Float,Description="List of genotype likelihoods">', #Number=G dont work for bcftools
+    PL => '##FORMAT=<ID=PL,Number=G,Type=Float,Description="List of Phred-scaled genotype likelihoods">', 
+    GL => '##FORMAT=<ID=GL,Number=G,Type=Float,Description="List of genotype likelihoods">',
     MAF => '##FORMAT=<ID=MAF,Number=1,Type=Float,Description="Minor allele frequence">',
     COV => '##FORMAT=<ID=COV,Number=1,Type=Integer,Description="Position read coverage">',
     AD => '##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles">',
     DP => '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Filtered read depth at the locus">',
-    DP4 => '##FORMAT=<ID=DP4,Number=1,Type=Integer,Description="Strand specific ref and alt read counts: ref-fwd, ref-rev, alt-fwd, alt-rev">',
-    ASF => '##FORMAT=<ID=ASF,Number=1,Type=Integer,Description="Alt strand specific reads fraction: min(fwd,rev)/max(fwd/rev)">',
-    RSF => '##FORMAT=<ID=ASF,Number=1,Type=Integer,Description="Ref strand specific reads fraction: min(fwd,rev)/max(fwd/rev)">',
+    DP4 => '##FORMAT=<ID=DP4,Number=1,Type=Float,Description="Strand specific ref and alt read counts: ref-fwd, ref-rev, alt-fwd, alt-rev">',
+    ASF => '##FORMAT=<ID=ASF,Number=1,Type=Float,Description="Alt strand specific reads fraction: min(fwd,rev)/max(fwd/rev)">',
+    RSF => '##FORMAT=<ID=RSF,Number=1,Type=Float,Description="Ref strand specific reads fraction: min(fwd,rev)/max(fwd/rev)">',
 );
 my $caller='';
 
@@ -50,12 +57,15 @@ my $caller='';
             my @v = split /:/,$l[-1];
             my $i;
 
-            #bcftools norm adapts DP, AD, DP4, PL, GL during slipt of multiallelic sites
+            #bcftools norm adapts GT, DP, AD, PL, GL during slipt of multiallelic sites
+            ($i) = indexes { /^GT$/ } @t;
+            my @gt = split/\//,$v[$i];
+            $v[$i]=join("/",sort {$a <=> $b} @gt); # bcftools fix
 
-            my ($dp4) = indexes { $_=~/^DP4$/ } @t;
+            my ($dp4) = indexes { /^DP4$/ } @t;
             if(! defined $dp4){
                 my @dp4;
-                if(($i) = indexes { $_=~/^SB$/ } @t){ #gatk4 haplotypecaller fix (requieres -A StrandBiasBySample)
+                if(($i) = indexes { /^SB$/ } @t){ #gatk4 haplotypecaller fix (requieres -A StrandBiasBySample)
                     @dp4 = split/,/,$v[$i];
                 } elsif($l[-3]=~/[\s;]SRF=([^\s;]+)/){ #freebayes fix
                     @dp4 = ($1);
@@ -74,9 +84,9 @@ my $caller='';
                     $l[-4]=~/[\s;]NR=([^\s;]+)/;
                     my $altr=sum(split/,/,$1);
                     @dp4 = ($allf-$altf,$allr-$altr,$altf,$altr);
-                } elsif(($i) = indexes { $_=~/^ALD$/ } @t){ #vardict fix
+                } elsif(($i) = indexes { /^ALD$/ } @t){ #vardict fix
                     @dp4 = ($v[$i]);
-                    ($i) = indexes { $_=~/^RD$/ } @t;
+                    ($i) = indexes { /^RD$/ } @t;
                     push @dp4 , $v[$i];
                 } else {
                     next;
@@ -90,9 +100,9 @@ my $caller='';
                 }
             }
 
-            ($i) = indexes { $_=~/^AD$/ } @t;
+            ($i) = indexes { /^AD$/ } @t;
             if (defined $i && $v[$i]!~/,/){ #varscanfix (only correct for 1 or 2 alleles)
-                if (my ($j) = indexes { $_=~/^RD$/ } @t){
+                if (my ($j) = indexes { /^RD$/ } @t){
                     my @alleles = split /,/,$l[4];
                     pop @alleles;
                     my @ad;
@@ -104,8 +114,8 @@ my $caller='';
             }
 
             unless (grep { $_ =~ /^DP$/ } @t){
-                if (($i) = indexes { $_=~/^NR$/ } @t) { #platypus fix
-                    my ($j) = indexes { $_=~/^NV$/ } @t;
+                if (($i) = indexes { /^NR$/ } @t) { #platypus fix
+                    my ($j) = indexes { /^NV$/ } @t;
                     my $dp = max(split /,/,$v[$i]);
                     my @ad = split /,/,$v[$j];
                     unshift @ad, $dp-sum(@ad);
@@ -113,11 +123,11 @@ my $caller='';
                     splice @t, 1, 0, 'AD';
                     splice @v, 1, 0, $dp;
                     splice @v, 1, 0, join(",",@ad);
-                } elsif (($i) = indexes { $_=~/^DP4$/ } @t) {
+                } elsif (($i) = indexes { /^DP4$/ } @t) {
                     my $dp = sum split /,/,$v[$i];
                     splice @v, 1, 0, $dp;
                     splice @t, 1, 0, 'DP';
-                } elsif (($i) = indexes { $_=~/^AD$/ } @t) {
+                } elsif (($i) = indexes { /^AD$/ } @t) {
                     my $dp = sum split /,/,$v[$i];
                     splice @v, 1, 0, $dp;
                     splice @t, 1, 0, 'DP';
@@ -152,10 +162,10 @@ my $caller='';
             }
 
             # finally add COV, MAV and strand usage fraction info tags
-            ($i) = indexes { $_=~/^DP$/ } @t;
-            my ($j) = indexes { $_=~/^DP4$/ } @t;
+            ($i) = indexes { /^DP$/ } @t;
+            my ($j) = indexes { /^DP4$/ } @t;
             my @dp4 = split/,/,$v[$j];
-            ($j) = indexes { $_=~/^AD$/ } @t;
+            ($j) = indexes { /^AD$/ } @t;
             my @ad = split /,/,$v[$j]; 
 
             $v[$i] = min(sum(@ad), $v[$i]); #varscan, vardict and freebayes fix DP >= sum(AD|DP4) - (== total COV, not filtered depth), whereas AD values are based on filtered reads
@@ -163,39 +173,39 @@ my $caller='';
             shift @ad;
             my @maf;
             push @maf, $cov == 0 ? 0 : sprintf("%.4f",$_/$cov) for @ad;
-            $_=~s/(\.[^0]*)0+$/\1/ for @maf;
+            $_=~s/(\.[^0]*)0+$/$1/ for @maf;
             $_=~s/\.$// for @maf;
             my $rsf = max($dp4[0],$dp4[1]) == 0 ? 0 : sprintf("%.4f",min($dp4[0],$dp4[1])/max($dp4[0],$dp4[1]));
-            $rsf=~s/(\.[^0]*)0+$/\1/;
+            $rsf=~s/(\.[^0]*)0+$/$1/;
             $rsf=~s/\.$//g;
             my $asf = max($dp4[2],$dp4[3]) == 0 ? 0 : sprintf("%.4f",min($dp4[2],$dp4[3])/max($dp4[2],$dp4[3]));
-            $asf=~s/(\.[^0]*)0+$/\1/;
+            $asf=~s/(\.[^0]*)0+$/$1/;
             $asf=~s/\.$//;
 
-            ($i) = indexes { $_=~/^COV$/ } @t;
+            ($i) = indexes { /^COV$/ } @t;
             if(defined $i){
                 $v[$i]=$cov
             } else {
                 splice @t, 1, 0, 'COV';
                 splice @v, 1, 0, $cov;
             }
-            ($i) = indexes { $_=~/^MAF$/ } @t;
+            ($i) = indexes { /^MAF$/ } @t;
             if(defined $i){
                 $v[$i]=join(",",@maf);
             } else {
                 splice @t, 1, 0, 'MAF';
                 splice @v, 1, 0, join(",",@maf);
             }
-            ($i) = indexes { $_=~/^ASF$/ } @t;
+            ($i) = indexes { /^ASF$/ } @t;
             if(defined $i){
-                $v[$i]=join(",",@maf);
+                $v[$i]=$asf;
             } else {
                 splice @t, 1, 0, 'ASF';
                 splice @v, 1, 0, $asf;
             }
-            ($i) = indexes { $_=~/^RSF$/ } @t;
+            ($i) = indexes { /^RSF$/ } @t;
             if(defined $i){
-                $v[$i]=join(",",@maf);
+                $v[$i]=$rsf;
             } else {
                 splice @t, 1, 0, 'RSF';
                 splice @v, 1, 0, $rsf;

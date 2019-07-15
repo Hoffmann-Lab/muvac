@@ -27,7 +27,7 @@ options::usage() {
 		-a       | --adapter [string,..]    : adapter sequence(s), comma seperated - optional
 		-o       | --out [path]             : output directory - default: $OUTDIR
 		-l       | --log [path]             : output directory - default: $OUTDIR/run.log
-		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/rippchen_tmp
+		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/tmp.XXXXXXXXXX.muvac
 		-t       | --threads [value]        : threads - predicted default: $THREADS
 		-mem     | --memory [value]         : amout of memory for creating bam slices and processing them in parallel instances
 		                                      available: $MAXMEMORY
@@ -111,7 +111,7 @@ options::developer() {
 		bwa   : BWA mapping
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
-		slice : better dont touch! slicing of bams for parallelization of rg,rmd,nsplit,reo,laln,bqsr
+		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
 		rg    : read group modification
 		rmd   : removing duplicates
 		nsplit: splitting split-read alignments
@@ -146,6 +146,7 @@ options::checkopt (){
 		-o   | --out) arg=true; OUTDIR=$2;;
 		-l   | --log) arg=true; LOG=$2;;
 		-tmp | --tmp) arg=true; TMPDIR=$2;;
+		-prevtmp | --previoustmp) arg=true; PREVIOUSTMPDIR=$2;;
 
 		-1   | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 <<< $2; NFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ1[-1]}")";;
 		-2   | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 <<< $2; NFASTQ2[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ2[-1]}")";;

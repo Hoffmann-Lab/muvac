@@ -177,42 +177,21 @@ alignment::splitncigar() {
 	local minstances mthreads jmem jgct jcgct 
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
-	local m i o slice instances ithreads odir tdir dinstances djmem djgct djcgct
+	local m i o slice instances ithreads odir
 	for m in "${_mapper_splitncigar[@]}"; do
 		declare -n _bams_splitncigar=$m
 		((instances+=${#_bams_splitncigar[@]}))
 	done
-	read -r dinstances ithreads djmem djgct djcgct < <(configure::jvm -i $instances -t 1 -T $threads)
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 10 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3
+	declare -a tomerge cmd1 cmd2
 	for m in "${_mapper_splitncigar[@]}"; do
 		declare -n _bams_splitncigar=$m
 		odir="$outdir/$m"
-		tdir="$tmpdir/$m"
-		mkdir -p "$odir" "$tdir"
+		mkdir -p "$odir"
 
 		for i in "${!_bams_splitncigar[@]}"; do
 			tomerge=()
-			o="$(basename "${_bams_splitncigar[$i]}")"
-			o="${o%.*}"
-
-			commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
-				ln -sfn "$genome" "$tdir/$o.fa"
-			CMD
-				samtools faidx "$tdir/$o.fa"
-			CMD
-				rm -f "$tdir/$o.dict"
-			CMD
-				picard
-					-Xmx${djmem}m
-					-XX:ParallelGCThreads=$djgct
-					-XX:ConcGCThreads=$djcgct
-					-Djava.io.tmpdir="$tmpdir"
-					CreateSequenceDictionary
-					R="$tdir/$o.fa"
-					VERBOSITY=WARNING
-			CMD
 
 			# v3.X ReassignOneMappingQuality: e.g. misused 255 as unique flag to 60
 			# -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60
@@ -222,7 +201,7 @@ alignment::splitncigar() {
 			# 					--read-filter MappingQualityReadFilter --minimum-mapping-quality 0
 			# only for FR-PE data else produces empty file!	--read-filter MateDifferentStrandReadFilter
 			while read -r slice; do
-				commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
 					gatk
 						--java-options '
 							-Xmx${jmem}m
@@ -233,7 +212,7 @@ alignment::splitncigar() {
 						SplitNCigarReads
 						-I "$slice"
 						-O "$slice.nsplit"
-						-R "$tdir/$o.fa"
+						-R "$genome"
 						-verbosity ERROR
 						--tmp-dir $tmpdir
 				CMD
@@ -245,9 +224,11 @@ alignment::splitncigar() {
 				tomerge+=("$slice")
 			done < "${_bamslices_splitncigar[${_bams_splitncigar[$i]}]}"
 
-			o="$odir/$o.nsplit.bam"
+			o="$odir/$(basename "${_bams_splitncigar[$i]}")"
+			o="${o%.*}.nsplit.bam"
+
 			# slices have full sam header info used by merge to maintain the global sort order
-			commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD
+			commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
 				samtools merge
 					-@ $ithreads
 					-f
@@ -265,11 +246,9 @@ alignment::splitncigar() {
 	$skip && {
 		commander::printcmd -a cmd1
 		commander::printcmd -a cmd2
-		commander::printcmd -a cmd3
 	} || {
-		{	commander::runcmd -v -b -t $dinstances -a cmd1 && \
-            commander::runcmd -v -b -t $minstances -a cmd2 && \
-			commander::runcmd -v -b -t $instances -a cmd3
+		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
+			commander::runcmd -v -b -t $instances -a cmd2
 		} || { 
 			commander::printerr "$funcname failed"
 			return 1
@@ -321,45 +300,24 @@ alignment::leftalign() {
 	local minstances mthreads jmem jgct jcgct
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
-	local m i o slice odir tdir instances ithreads dinstances djmem djgct djcgct
+	local m i o slice odir instances ithreads
 	for m in "${_mapper_leftalign[@]}"; do
 		declare -n _bams_leftalign=$m
 		((instances+=${#_bams_leftalign[@]}))
 	done
-   	read -r dinstances ithreads djmem djgct djcgct < <(configure::jvm -i $instances -t 1 -T $threads)
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 10 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3
+	declare -a tomerge cmd1 cmd2
 	for m in "${_mapper_leftalign[@]}"; do
 		declare -n _bams_leftalign=$m
 		odir="$outdir/$m"
-		tdir="$tmpdir/$m"
-		mkdir -p "$odir" "$tdir"
+		mkdir -p "$odir"
 
 		for i in "${!_bams_leftalign[@]}"; do
 			tomerge=()
-			o="$(basename "${_bams_leftalign[$i]}")"
-			o="${o%.*}"
-
-			commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
-				ln -sfn "$genome" "$tdir/$o.fa"
-			CMD
-				samtools faidx "$tdir/$o.fa"
-			CMD
-				rm -f "$tdir/$o.dict"
-			CMD
-				picard
-					-Xmx${djmem}m
-					-XX:ParallelGCThreads=$djgct
-					-XX:ConcGCThreads=$djcgct
-					-Djava.io.tmpdir="$tmpdir"
-					CreateSequenceDictionary
-					R="$tdir/$o.fa"
-					VERBOSITY=WARNING
-			CMD
 
 			while read -r slice; do
-				commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
 					gatk
 						--java-options '
 								-Xmx${jmem}m
@@ -370,7 +328,7 @@ alignment::leftalign() {
 						LeftAlignIndels
 						-I "$slice"
 						-O "$slice.leftaln"
-						-R "$tdir/$o.fa"
+						-R "$genome"
 						-verbosity ERROR
 						--tmp-dir $tmpdir
 				CMD
@@ -382,9 +340,11 @@ alignment::leftalign() {
 				tomerge+=("$slice")
 			done < "${_bamslices_leftalign[${_bams_leftalign[$i]}]}"
 
-			o="$odir/$o.leftaln.bam"
+			o="$odir/$(basename "${_bams_leftalign[$i]}")"
+			o="${o%.*}.leftaln.bam"
+
 			# slices have full sam header info used by merge to maintain the global sort order
-			commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD
+			commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
 				samtools merge
 					-@ $ithreads
 					-f
@@ -402,11 +362,9 @@ alignment::leftalign() {
 	$skip && {
 		commander::printcmd -a cmd1
 		commander::printcmd -a cmd2
-        commander::printcmd -a cmd3
 	} || {
-		{	commander::runcmd -v -b -t $dinstances -a cmd1 && \
-            commander::runcmd -v -b -t $minstances -a cmd2 && \
-			commander::runcmd -v -b -t $instances -a cmd3
+		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
+			commander::runcmd -v -b -t $instances -a cmd2
 		} || { 
 			commander::printerr "$funcname failed"
 			return 1
@@ -466,42 +424,21 @@ alignment::bqsr() {
 	local minstances mthreads jmem jgct jcgct 
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
-	local m i o slice odir instances ithreads dinstances djmem djgct djcgct
+	local m i o slice odir instances ithreads
 	for m in "${_mapper_bqsr[@]}"; do
 		declare -n _bams_bqsr=$m
 		((instances+=${#_bams_bqsr[@]}))
 	done
-    read -r dinstances ithreads djmem djgct djcgct < <(configure::jvm -i $instances -t 1 -T $threads)
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 10 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3 cmd4
+	declare -a tomerge cmd1 cmd2 cmd3
 	for m in "${_mapper_bqsr[@]}"; do
 		declare -n _bams_bqsr=$m
 		odir="$outdir/$m"
-        tdir="$tmpdir/$m"
-		mkdir -p "$odir" "$tdir"
+		mkdir -p "$odir"
 
 		for i in "${!_bams_bqsr[@]}"; do
 			tomerge=()
-			o="$(basename "${_bams_bqsr[$i]}")"
-			o="${o%.*}"
-
-			commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
-				ln -sfn "$genome" "$tdir/$o.fa"
-			CMD
-				samtools faidx "$tdir/$o.fa"
-			CMD
-				rm -f "$tdir/$o.dict"
-			CMD
-				picard
-					-Xmx${djmem}m
-					-XX:ParallelGCThreads=$djgct
-					-XX:ConcGCThreads=$djcgct
-					-Djava.io.tmpdir="$tmpdir"
-					CreateSequenceDictionary
-					R="$tdir/$o.fa"
-					VERBOSITY=WARNING
-			CMD
 
 			while read -r slice; do
 				# https://gatkforums.broadinstitute.org/gatk/discussion/7131/is-indel-realignment-removed-from-gatk4
@@ -517,7 +454,7 @@ alignment::bqsr() {
 				# -> i.e. also true for BQSRPipelineSpark which does both steps in one
 				# GatherBQSRReports - Gathers scattered BQSR recalibration reports into a single file
 				# 
-				commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
+				commander::makecmd -a cmd1 -s '|' -c {COMMANDER[0]}<<- CMD
 					gatk
 						--java-options '
 								-Xmx${jmem}m
@@ -526,7 +463,7 @@ alignment::bqsr() {
 								-Djava.io.tmpdir="$tmpdir"
 							'
 						BaseRecalibrator
-						-R "$tdir/$o.fa"
+						-R "$genome"
 						--known-sites "$dbsnp"
 						-I "$slice"
 						-O "$slice.bqsreport"
@@ -534,7 +471,7 @@ alignment::bqsr() {
 						--tmp-dir $tmpdir
 				CMD
 
-				commander::makecmd -a cmd3 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
+				commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[3]}<<- CMD
 					rm -rf "$slice.bqsr.parts"
 				CMD
 					gatk
@@ -559,9 +496,10 @@ alignment::bqsr() {
 				tomerge+=("$slice")
 			done < "${_bamslices_bqsr[${_bams_bqsr[$i]}]}"
 
-			o="$odir/$o.bqsr.bam"
+			o="$odir/$(basename "${_bams_bqsr[$i]}")"
+			o="${o%.*}.bqsr.bam"
 			# slices have full sam header info used by merge to maintain the global sort order
-			commander::makecmd -a cmd4 -s '|' -c {COMMANDER[0]}<<- CMD
+			commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD
 				samtools merge
 					-@ $ithreads
 					-f
@@ -580,12 +518,10 @@ alignment::bqsr() {
         commander::printcmd -a cmd1
 		commander::printcmd -a cmd2
 		commander::printcmd -a cmd3
-		commander::printcmd -a cmd4
 	} || {
-		{	commander::runcmd -v -b -t $dinstances -a cmd1 && \
-            commander::runcmd -v -b -t $minstances -a cmd2 && \
-			commander::runcmd -v -b -t $minstances -a cmd3 && \
-			commander::runcmd -v -b -t $instances -a cmd4
+		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
+			commander::runcmd -v -b -t $minstances -a cmd2 && \
+			commander::runcmd -v -b -t $instances -a cmd3
 		} || { 
 			commander::printerr "$funcname failed"
 			return 1

@@ -188,6 +188,16 @@ pipeline::germline() {
 	declare -A slicesinfo
 
 	pipeline::_preprocess || return 1
+	[[ ${#mapper[@]} -eq 0 ]] && return 0
+
+	genome::mkdict \
+		-S ${NOdict:=false} \
+		-s ${SKIPdict:=false} \
+		-5 ${SKIPmd5:=false} \
+		-i $GENOME \
+		-p $TMPDIR \
+		-t $THREADS || return 1
+
 	local sliced=false
 
 	{	pipeline::_slice $($sliced || ${SKIPrg:=false} || ${NOrg:=false} && echo true || echo false) && \
@@ -268,6 +278,14 @@ pipeline::germline() {
 			-c slicesinfo \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped && \
+		alignment::postprocess \
+			-S ${NOidx:=false} \
+			-s ${SKIPidx:=false} \
+			-j index \
+			-t $THREADS \
+			-p $TMPDIR \
+			-o $OUTDIR/mapped \
+			-r mapper && \
 		pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
 		callvariants::haplotypecaller \
 			-S ${NOhc:=false} \
@@ -304,6 +322,16 @@ pipeline::somatic() {
 	declare -A slicesinfo
 
 	pipeline::_preprocess || return 1
+	[[ ${#mapper[@]} -eq 0 ]] && return 0
+
+	genome::mkdict \
+		-S ${NOdict:=false} \
+		-s ${SKIPdict:=false} \
+		-5 ${SKIPmd5:=false} \
+		-i $GENOME \
+		-p $TMPDIR \
+		-t $THREADS || return 1
+
 	local sliced=false
 
 	{	pipeline::_slice $($sliced || ${SKIPrg:=false} || ${NOrg:=false} && echo true || echo false) && \
@@ -385,7 +413,15 @@ pipeline::somatic() {
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-o $OUTDIR/mapped && \
+		alignment::postprocess \
+			-S ${NOidx:=false} \
+			-s ${SKIPidx:=false} \
+			-j index \
+			-t $THREADS \
+			-p $TMPDIR \
+			-o $OUTDIR/mapped \
+			-r mapper
 	} || return 1
 
 	return 0
