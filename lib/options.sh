@@ -39,6 +39,7 @@ options::usage() {
 		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
 		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
 		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)
+		-rgn     | --readgroup-name [string]: sets custom read group name - use TUMOR or NORMAL for postponed somatic calls - default: ''
 
 		SOMATIC OPTIONS
 		-n1      | --normalfq1 [path,..]    : normal fastq input - single or first pair, comma seperated
@@ -53,7 +54,7 @@ options::usage() {
 		                                      NOTE: necessary for sucessfully duplicates removal
 		-resume  | --resume-from [value]    : resume from a specific pipeline step - see -dev|--devel
 		-skip    | --skip [value,..]        : skip specific pipeline step(s) - see -dev|--devel, comma seperated
-		-redo    | --redo [value]           : just rerun a specific pipeline step - see -dev|--devel, comma seperated
+		-redo    | --redo [value,..]        : just rerun specific pipeline step(s) - see -dev|--devel, comma seperated
 		-no-qual | --no-qualityanalysis     : disables quality analysis
 		-no-clip | --no-clipping            : disables removal of adapter sequences if -a|--adapter is used
 		-no-trim | --no-trimming            : disables quality trimming
@@ -158,6 +159,7 @@ options::checkopt (){
 		-a   | --adapter) arg=true; mapfile -t -d ',' ADAPTER <<< $2;;
 		-d   | --distance) arg=true; DISTANCE=$2;;
 		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
+		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
 
 	   	-resume | --resume-from)
 			arg=true
@@ -180,8 +182,13 @@ options::checkopt (){
 			arg=true
 			# don't Smd5, Sslice !
 			for s in qual clip trim cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
-				[[ "$2" == "$s" ]] && continue
 				eval "SKIP$s=true"
+			done
+			mapfile -d ',' -t <<< $2
+			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
+				for s in qual clip trim cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+					[[ "$x" == "$s" ]] && eval "SKIP$s=false"
+				done
 			done
 		;;
 

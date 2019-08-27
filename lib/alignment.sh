@@ -20,15 +20,16 @@ alignment::addreadgroup() {
 		return 0
 	}
 
-	local OPTIND arg mandatory skip=false threads memory tmpdir outdir i
+	local OPTIND arg mandatory skip=false threads memory tmpdir outdir i rgprefix=''
 	declare -n _mapper_addreadgroup _bamslices_addreadgroup _nidx_addreadgroup _tidx_addreadgroup
 	declare -A nidx tidx
-	while getopts 'S:s:t:m:r:1:2:c:p:o:' arg; do
+	while getopts 'S:s:t:m:n:r:1:2:c:p:o:' arg; do
 		case $arg in
 			S) $OPTARG && return 0;;
 			s) $OPTARG && skip=true;;
 			t) ((mandatory++)); threads=$OPTARG;;
 			m) ((mandatory++)); memory=$OPTARG;;
+			n) rgprefix=${OPTARG}_;;
 			r) ((mandatory++)); _mapper_addreadgroup=$OPTARG;;
 			1) _nidx_addreadgroup=$OPTARG;;
 			2) _tidx_addreadgroup=$OPTARG;;
@@ -73,8 +74,10 @@ alignment::addreadgroup() {
 		mkdir -p "$odir"
 
 		for i in "${!_bams_addreadgroup[@]}"; do
-			[[ ${nidx[$i]} ]] && rgprefix=NORMAL_ || rgprefix=TUMOR_
-			[[ ! $tidx ]] && rgprefix=''
+			if [[ ! $rgprefix ]]; then
+				[[ ${nidx[$i]} ]] && rgprefix=NORMAL_ || rgprefix=TUMOR_
+				[[ ! $tidx ]] && rgprefix=''
+			fi
 
 			tomerge=()
 			o="$(basename "${_bams_addreadgroup[$i]}")"

@@ -102,7 +102,7 @@ else
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
 
-commander::print "muvac started with command: $CMD" > $LOG || die "cannot access $LOG"
+commander::print "muvac v$version started with command: $CMD" > $LOG || die "cannot access $LOG"
 commander::print "temporary files go to: $TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 

@@ -65,7 +65,7 @@ pipeline::_preprocess(){
 			} || return 1
 		}
 		${NOcor:=true} || {
-			{	qualdirs+=("$OUTDIR/qualities/corrected")
+			{	# qualdirs+=("$OUTDIR/qualities/corrected")
 				preprocess::rcorrector \
 					-S ${NOcor:=false} \
 					-s ${SKIPcor:=false} \
@@ -129,7 +129,8 @@ pipeline::_preprocess(){
 					-p ${NOsplitreads:=true} \
 					-g $GENOME \
 					-x $GENOME.segemehl.idx \
-					-r mapper
+					-r mapper && \
+				alignment::add4stats -r mapper
 			} || return 1
 		}
 	else
@@ -147,6 +148,7 @@ pipeline::_preprocess(){
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
 			-r mapper && \
+		alignment::add4stats -r mapper && \
 		alignment::postprocess \
 			-S ${NOsort:=false} \
 			-s ${SKIPsort:=false} \
@@ -154,7 +156,13 @@ pipeline::_preprocess(){
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
-			-r mapper
+			-r mapper && \
+		alignment::bamstats \
+			-S ${NOstats:=false} \
+			-s ${SKIPstats:=false} \
+			-r mapper \
+			-t $THREADS \
+			-o $OUTDIR/stats
 		# alignment::postprocess \ <- applied by alignment::slice anyways
 		# 	-S ${NOidx:=false} \
 		# 	-s ${SKIPidx:=false} \
@@ -206,6 +214,7 @@ pipeline::germline() {
 			-s ${SKIPrg:=false} \
 			-t $THREADS \
 			-m $MEMORY \
+			-n ${RGPREFIX:=''} \
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
