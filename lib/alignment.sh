@@ -29,7 +29,7 @@ alignment::addreadgroup() {
 			s) $OPTARG && skip=true;;
 			t) ((mandatory++)); threads=$OPTARG;;
 			m) ((mandatory++)); memory=$OPTARG;;
-			n) rgprefix=${OPTARG}_;;
+			n) rgprefix=${OPTARG};;
 			r) ((mandatory++)); _mapper_addreadgroup=$OPTARG;;
 			1) _nidx_addreadgroup=$OPTARG;;
 			2) _tidx_addreadgroup=$OPTARG;;
@@ -75,8 +75,8 @@ alignment::addreadgroup() {
 
 		for i in "${!_bams_addreadgroup[@]}"; do
 			if [[ ! $rgprefix ]]; then
-				[[ ${nidx[$i]} ]] && rgprefix=NORMAL_ || rgprefix=TUMOR_
-				[[ ! $tidx ]] && rgprefix=''
+				[[ ${nidx[$i]} ]] && rgprefix=NORMAL || rgprefix=TUMOR
+				[[ ! $tidx ]] && rgprefix='SAMPLE'
 			fi
 
 			tomerge=()
@@ -92,11 +92,11 @@ alignment::addreadgroup() {
 						AddOrReplaceReadGroups
 						I="$slice"
 						O="$slice.rg"
-						RGID=${rgprefix}1
+						RGID=${rgprefix}id
 						RGLB=${rgprefix}lib
 						RGPL=illumina
 						RGPU=${rgprefix}unit
-						RGSM="$o"
+						RGSM=${rgprefix}
 						VALIDATION_STRINGENCY=SILENT
 						VERBOSITY=WARNING
 				CMD

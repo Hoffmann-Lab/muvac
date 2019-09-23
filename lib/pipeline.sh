@@ -156,13 +156,7 @@ pipeline::_preprocess(){
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
-			-r mapper && \
-		alignment::bamstats \
-			-S ${NOstats:=false} \
-			-s ${SKIPstats:=false} \
-			-r mapper \
-			-t $THREADS \
-			-o $OUTDIR/stats
+			-r mapper
 		# alignment::postprocess \ <- applied by alignment::slice anyways
 		# 	-S ${NOidx:=false} \
 		# 	-s ${SKIPidx:=false} \
@@ -229,7 +223,14 @@ pipeline::germline() {
 			-c slicesinfo \
 			-x "$REGEX" \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-o $OUTDIR/mapped && \
+		alignment::add4stats -r mapper && \
+		alignment::bamstats \
+			-S ${NOstats:=false} \
+			-s ${SKIPstats:=false} \
+			-r mapper \
+			-t $THREADS \
+			-o $OUTDIR/stats
 	} || return 1
 
 	${NOsplitreads:=true} || {
@@ -366,6 +367,13 @@ pipeline::somatic() {
 			-x "$REGEX" \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped
+		alignment::add4stats -r mapper && \
+		alignment::bamstats \
+			-S ${NOstats:=false} \
+			-s ${SKIPstats:=false} \
+			-r mapper \
+			-t $THREADS \
+			-o $OUTDIR/stats
 	} || return 1
 
 	${NOsplitreads:=true} || {
@@ -430,7 +438,20 @@ pipeline::somatic() {
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
-			-r mapper
+			-r mapper && \
+		pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
+		callvariants::mutect \
+			-S ${NOmu:=false} \
+			-s ${SKIPmu:=false} \
+			-t $THREADS \
+			-m $MEMORY \
+			-g $GENOME \
+			-r mapper \
+			-1 NIDX \
+			-2 TIDX \
+			-c slicesinfo \
+			-p $TMPDIR \
+			-o $OUTDIR/variants
 	} || return 1
 
 	return 0

@@ -94,11 +94,11 @@ helper::addmemberfunctions -v TFASTQ1 -v TFASTQ2 -v TMAPPED
 if [[ $NFASTQ1 ]]; then
 	FASTQ1.join NFASTQ1 TFASTQ1
 	FASTQ2.join NFASTQ2 TFASTQ2
-	NIDX.push NFASTQ1.idxs
+	NIDX.push $(NFASTQ1.idxs)
 	TIDX.push $(seq $(NFASTQ1.length) $(($(NFASTQ1.length)+$(TFASTQ1.length)-1)))
 else
 	MAPPED.join NMAPPED TMAPPED
-	NIDX.push NMAPPED.idxs
+	NIDX.push $(NMAPPED.idxs)
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
 

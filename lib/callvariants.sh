@@ -71,9 +71,9 @@ callvariants::haplotypecaller() {
 	}
 
 	local OPTIND arg mandatory skip=false threads memory genome dbsnp tmpdir outdir i
-	declare -n _mapper_bqsr _bamslices_bqsr
+	declare -n _mapper_haplotypecaller _bamslices_haplotypecaller
 	declare -A nidx tidx
-	while getopts 'S:s:t:g:d:m:r:1:2:c:p:o:' arg; do
+	while getopts 'S:s:t:g:d:m:r:c:p:o:' arg; do
 		case $arg in
 			S) $OPTARG && return 0;;
 			s) $OPTARG && skip=true;;
@@ -81,8 +81,8 @@ callvariants::haplotypecaller() {
 			m) ((mandatory++)); memory=$OPTARG;;
 			g) ((mandatory++)); genome="$OPTARG";;
 			d) dbsnp="$OPTARG";;
-			r) ((mandatory++)); _mapper_bqsr=$OPTARG;;
-			c) ((mandatory++)); _bamslices_bqsr=$OPTARG;;
+			r) ((mandatory++)); _mapper_haplotypecaller=$OPTARG;;
+			c) ((mandatory++)); _bamslices_haplotypecaller=$OPTARG;;
 			p) ((mandatory++)); tmpdir="$OPTARG";;
 			o) ((mandatory++)); outdir="$OPTARG";;
 			*) _usage; return 1;;
@@ -102,20 +102,20 @@ callvariants::haplotypecaller() {
 	local minstances mthreads jmem jgct jcgct 
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
-	local m i o slice odir instances ithreads
-	for m in "${_mapper_bqsr[@]}"; do
-		declare -n _bams_bqsr=$m
-		((instances+=${#_bams_bqsr[@]}))
+	local m i o e slice odir instances ithreads
+	for m in "${_mapper_haplotypecaller[@]}"; do
+		declare -n _bams_haplotypecaller=$m
+		((instances+=${#_bams_haplotypecaller[@]}))
 	done
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5
-	for m in "${_mapper_bqsr[@]}"; do
-		declare -n _bams_bqsr=$m
+	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6
+	for m in "${_mapper_haplotypecaller[@]}"; do
+		declare -n _bams_haplotypecaller=$m
 		odir="$outdir/$m"
 		mkdir -p "$odir"
 
-		for i in "${!_bams_bqsr[@]}"; do
+		for i in "${!_bams_haplotypecaller[@]}"; do
 			tomerge=()
             
 			while read -r slice; do
@@ -172,39 +172,24 @@ callvariants::haplotypecaller() {
 				CMD
 
 				tomerge+=("$slice")
-			done < "${_bamslices_bqsr[${_bams_bqsr[$i]}]}"
+			done < "${_bamslices_haplotypecaller[${_bams_haplotypecaller[$i]}]}"
 
-			o="$odir/$(basename "${_bams_bqsr[$i]}")"
+			o="$odir/$(basename "${_bams_haplotypecaller[$i]}")"
 			o="${o%.*}"
 
-			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.vcf" $(printf '"%s" ' "${tomerge[@]/%/.vcf}")
-			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.vcf}")
-			CMD
-				tabix -f -p vcf "$o.vcf.gz"
-			CMD
-			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.fixed.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.vcf}")
-			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.vcf}")
-			CMD
-				tabix -f -p vcf "$o.fixed.vcf.gz"
-			CMD
-			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.fixed.nomulti.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.vcf}")
-			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.vcf}")
-			CMD
-				tabix -f -p vcf "$o.fixed.nomulti.vcf.gz"
-			CMD
-			commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
-				bcftools concat -o "$o.fixed.nomulti.normed.vcf" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.normed.vcf}")
-			CMD
-				bcftools concat --threads $ithreads -O z -o "$o.fixed.nomulti.normed.vcf.gz" $(printf '"%s" ' "${tomerge[@]/%/.fixed.nomulti.normed.vcf}")
-			CMD
-				tabix -f -p vcf "$o.fixed.nomulti.normed.vcf.gz"
-			CMD
+			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
+				commander::makecmd -a cmd5 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+					bcftools concat -o "$o.vcf" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
+				CMD
+					bcftools sort -T $tmpdir -m ${memory}M -o "$o.$e"
+				CMD
+
+				commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+					bgzip -f -@ $ithreads < "$o.$e" > "$o.$e.gz"
+				CMD
+					tabix -f -p vcf "$o.$e.gz"
+				CMD
+			done
 		done
 	done
 
@@ -214,12 +199,164 @@ callvariants::haplotypecaller() {
 		commander::printcmd -a cmd3
 		commander::printcmd -a cmd4
 		commander::printcmd -a cmd5
+		commander::printcmd -a cmd6
 	} || {
 		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
 			commander::runcmd -v -b -t $threads -a cmd2 && \
 			commander::runcmd -v -b -t $threads -a cmd3 && \
 			commander::runcmd -v -b -t $threads -a cmd4 && \
-			commander::runcmd -v -b -t $instances -a cmd5
+			commander::runcmd -v -b -t $minstances -a cmd5 && \
+			commander::runcmd -v -b -t $instances -a cmd6
+		} || { 
+			commander::printerr "$funcname failed"
+			return 1
+		}
+	}
+
+	return 0
+}
+
+callvariants::mutect() {
+	local funcname=${FUNCNAME[0]}
+	_usage() {
+		commander::printerr {COMMANDER[0]}<<- EOF
+			$funcname usage: 
+			-S <hardskip>  | true/false return
+			-s <softskip>  | truefalse only print commands
+			-t <threads>   | number of
+			-g <genome>    | path to
+			-m <memory>    | amount of
+			-r <mapper>    | array of sorted, indexed bams within array of
+			-1 <normalidx> | array of (requieres -2)
+			-2 <tumoridx>  | array of
+			-c <sliceinfo> | array of
+			-p <tmpdir>    | path to
+			-o <outbase>   | path to
+		EOF
+		return 0
+	}
+
+	local OPTIND arg mandatory skip=false threads memory genome dbsnp tmpdir outdir i
+	declare -n _mapper_mutect _bamslices_mutect _nidx_mutect _tidx_mutect
+	declare -A nidx tidx
+	while getopts 'S:s:t:g:d:m:r:1:2:c:p:o:' arg; do
+		case $arg in
+			S) $OPTARG && return 0;;
+			s) $OPTARG && skip=true;;
+			t) ((mandatory++)); threads=$OPTARG;;
+			m) ((mandatory++)); memory=$OPTARG;;
+			g) ((mandatory++)); genome="$OPTARG";;
+			r) ((mandatory++)); _mapper_mutect=$OPTARG;;
+			c) ((mandatory++)); _bamslices_mutect=$OPTARG;;
+			1) ((mandatory++)); _nidx_mutect=$OPTARG;;
+			2) ((mandatory++)); _tidx_mutect=$OPTARG;;
+			p) ((mandatory++)); tmpdir="$OPTARG";;
+			o) ((mandatory++)); outdir="$OPTARG";;
+			*) _usage; return 1;;
+		esac
+	done
+	[[ $mandatory -lt 9 ]] && _usage && return 1
+
+	commander::print "calling variants mutect"
+
+	local minstances mthreads jmem jgct jcgct 
+	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
+
+	local m i o slice odir ithreads instances=$((${#_mapper_mutect[@]}*${#_tidx_mutect[@]}))
+	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
+
+	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6
+	for m in "${_mapper_mutect[@]}"; do
+		declare -n _bams_mutect=$m
+		odir="$outdir/$m"
+		mkdir -p "$odir"
+
+		for i in "${!_tidx_mutect[@]}"; do
+			tomerge=()
+            
+			while read -r nslice slice; do
+				# normal name defined for RGSM sam header entry by alignment::addreadgroup 
+				commander::makecmd -a cmd1 -s '|' -c {COMMANDER[0]}<<- CMD
+					gatk
+						--java-options '
+								-Xmx${jmem}m
+								-XX:ParallelGCThreads=$jgct
+								-XX:ConcGCThreads=$jcgct
+								-Djava.io.tmpdir="$tmpdir"
+							'
+						Mutect2
+						-I "$nslice"
+						-I "$slice"
+						-normal NORMAL
+						-tumor TUMOR
+						-O "$slice.unsorted.vcf"
+						-R "$genome"
+						-A Coverage
+						-A DepthPerAlleleBySample
+						-A StrandBiasBySample
+						--min-base-quality-score 20
+						--native-pair-hmm-threads $mthreads
+						-verbosity INFO
+						--tmp-dir $tmpdir
+				CMD
+
+				# commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
+				# 	vcfix.pl -i "$slice.vcf" > "$slice.fixed.vcf"
+				# CMD
+
+				# commander::makecmd -a cmd3 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+				# 	bcftools norm -f "$genome" -c s -m-both "$slice.fixed.vcf"
+				# CMD
+				# 	vcfix.pl -i - > "$slice.fixed.nomulti.vcf"
+				# CMD
+
+				# commander::makecmd -a cmd4 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD
+				# 	vcffixup "$slice.fixed.nomulti.vcf"
+				# CMD
+				# 	vt normalize -q -n -r "$genome" -
+				# CMD
+				# 	vcfixuniq.pl > "$slice.fixed.nomulti.normed.vcf"
+				# CMD
+
+				tomerge+=("$slice")
+			done < <(paste "${_bamslices_mutect[${_bams_mutect[${_nidx_mutect[$i]}]}]}" "${_bamslices_mutect[${_bams_mutect[${_tidx_mutect[$i]}]}]}")
+
+			o="$odir/$(basename "${_bams_mutect[${_tidx_mutect[$i]}]}")"
+			o="${o%.*}"
+
+			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
+				commander::makecmd -a cmd5 -s '|' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+					bcftools concat -o "$o.vcf" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
+				CMD
+					bcftools sort -T $tmpdir -m ${memory}M -o "$o.$e"
+				CMD
+
+				commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
+					bgzip -f -@ $ithreads < "$o.$e" > "$o.$e.gz"
+				CMD
+					tabix -f -p vcf "$o.$e.gz"
+				CMD
+
+				break
+			done
+
+		done
+	done
+
+	$skip && {
+		commander::printcmd -a cmd1
+	# 	commander::printcmd -a cmd2
+	# 	commander::printcmd -a cmd3
+	# 	commander::printcmd -a cmd4
+		commander::printcmd -a cmd5
+		commander::printcmd -a cmd6
+	} || {
+		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
+	# 		commander::runcmd -v -b -t $threads -a cmd2 && \
+	# 		commander::runcmd -v -b -t $threads -a cmd3 && \
+	# 		commander::runcmd -v -b -t $threads -a cmd4 && \
+			commander::runcmd -v -b -t $minstances -a cmd5 && \
+			commander::runcmd -v -b -t $instances -a cmd6
 		} || { 
 			commander::printerr "$funcname failed"
 			return 1
