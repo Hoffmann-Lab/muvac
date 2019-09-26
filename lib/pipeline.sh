@@ -23,27 +23,6 @@ pipeline::_preprocess(){
 				-1 FASTQ1 \
 				-2 FASTQ2
 		} || return 1
-		if [[ $ADAPTER ]]; then
-			${NOclip:=false} || {
-				{	qualdirs+=("$OUTDIR/qualities/clipped") && \
-					preprocess::cutadapt \
-						-S ${NOclip:=false} \
-						-s ${SKIPclip:=false} \
-						-a ADAPTER \
-						-t $THREADS \
-						-o $OUTDIR/clipped \
-						-1 FASTQ1 \
-						-2 FASTQ2 && \
-					preprocess::fastqc \
-						-S ${NOqual:=false} \
-						-s ${SKIPqual:=false} \
-						-t $THREADS \
-						-o $OUTDIR/qualities/clipped \
-						-1 FASTQ1 \
-						-2 FASTQ2
-				} || return 1
-			}
-		fi
 		${NOtrim:=false} || { 
 			{	qualdirs+=("$OUTDIR/qualities/trimmed") && \
 				preprocess::trimmomatic \
@@ -64,6 +43,28 @@ pipeline::_preprocess(){
 					-2 FASTQ2
 			} || return 1
 		}
+		if [[ $ADAPTER ]]; then
+			${NOclip:=false} || {
+				{	qualdirs+=("$OUTDIR/qualities/clipped") && \
+					preprocess::cutadapt \
+						-S ${NOclip:=false} \
+						-s ${SKIPclip:=false} \
+						-a ADAPTER1 \
+						-A ADAPTER2 \
+						-t $THREADS \
+						-o $OUTDIR/clipped \
+						-1 FASTQ1 \
+						-2 FASTQ2 && \
+					preprocess::fastqc \
+						-S ${NOqual:=false} \
+						-s ${SKIPqual:=false} \
+						-t $THREADS \
+						-o $OUTDIR/qualities/clipped \
+						-1 FASTQ1 \
+						-2 FASTQ2
+				} || return 1
+			}
+		fi
 		${NOcor:=true} || {
 			{	# qualdirs+=("$OUTDIR/qualities/corrected")
 				preprocess::rcorrector \

@@ -29,7 +29,7 @@ alignment::addreadgroup() {
 			s) $OPTARG && skip=true;;
 			t) ((mandatory++)); threads=$OPTARG;;
 			m) ((mandatory++)); memory=$OPTARG;;
-			n) rgprefix=${OPTARG};;
+			n) rgprefix=$OPTARG;;
 			r) ((mandatory++)); _mapper_addreadgroup=$OPTARG;;
 			1) _nidx_addreadgroup=$OPTARG;;
 			2) _tidx_addreadgroup=$OPTARG;;

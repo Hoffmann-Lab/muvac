@@ -24,7 +24,8 @@ options::usage() {
 		                                      2 - get full output
 		-g       | --genome [path]          : genome fasta input, without only preprocessing is performed
 		-s       | --snp [path]             : genome dbSNP input - optional, default: [-g].vcf
-		-a       | --adapter [string,..]    : adapter sequence(s), comma seperated - optional
+		-a1      | --adapter1 [string,..]   : adapter sequence(s) - optional. single or first pair, comma seperated
+		-a2      | --adapter2 [string,..]   : adapter sequence(s) - optional. second pair, comma seperated
 		-o       | --out [path]             : output directory - default: $OUTDIR
 		-l       | --log [path]             : output directory - default: $OUTDIR/run.log
 		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/tmp.XXXXXXXXXX.muvac
@@ -102,8 +103,8 @@ options::developer() {
 		DEVELOPER OPTIONS
 		md5   : check for md5sums and if necessary trigger genome indexing
 		qual  : quality analysis
-		clip  : adapter clipping
 		trim  : trimming
+		clip  : adapter clipping
 		cor   : raw read correction
 		rrm   : rRNA filtering
 		stats : proprocessing statistics
@@ -156,7 +157,8 @@ options::checkopt (){
 		-m   | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED <<< $2; NMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${NMAPPED[-1]}")"; NOqual=true; NOtrim=true; NOcor=true; NOrrm=true; NOsege=true; NOstar=true; NObwa=true;;
 		-tm  | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED <<< $2; TMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${TMAPPED[-1]}")";;
 		-rx  | --regex) arg=true; REGEX=$2;;
-		-a   | --adapter) arg=true; mapfile -t -d ',' ADAPTER <<< $2;;
+		-a1  | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 <<< $2; ADAPTER1[-1]="$(sed -r 's/\s*\n*$//' <<< "${ADAPTER1[-1]}")";;
+		-a2  | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 <<< $2; ADAPTER2[-1]="$(sed -r 's/\s*\n*$//' <<< "${ADAPTER2[-1]}")";;
 		-d   | --distance) arg=true; DISTANCE=$2;;
 		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
 		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
@@ -164,7 +166,7 @@ options::checkopt (){
 	   	-resume | --resume-from)
 			arg=true
 			# don't Smd5, Sslice !
-			for s in qual clip trim cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+			for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
 				[[ "$2" == "$s" ]] && break
 				eval "SKIP$s=true"
 			done
@@ -173,7 +175,7 @@ options::checkopt (){
 			arg=true
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in md5 qual clip trim cor rrm stats sege star bwa uniq sort slice rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+				for s in md5 qual trim clip cor rrm stats sege star bwa uniq sort slice rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
 					[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 				done
 			done
@@ -181,12 +183,12 @@ options::checkopt (){
 		-redo | --redo)
 			arg=true
 			# don't Smd5, Sslice !
-			for s in qual clip trim cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+			for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
 				eval "SKIP$s=true"
 			done
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in qual clip trim cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+				for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
 					[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 				done
 			done
