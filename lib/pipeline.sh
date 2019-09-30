@@ -43,7 +43,7 @@ pipeline::_preprocess(){
 					-2 FASTQ2
 			} || return 1
 		}
-		if [[ $ADAPTER ]]; then
+		if [[ $ADAPTER1 ]]; then
 			${NOclip:=false} || {
 				{	qualdirs+=("$OUTDIR/qualities/clipped") && \
 					preprocess::cutadapt \

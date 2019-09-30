@@ -29,17 +29,13 @@ cleanup() {
 	fi
 }
 
-[[ ! $OSTYPE =~ linux ]] && die "unsupported operating system"
-[[ ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -ge 4 ]] || [[ ${BASH_VERSINFO[0]} -gt 4 ]] || die "requieres bash version 4.4 or above"
 [[ ! $MUVAC ]] && die "cannot find installation. please run setup and/or do: export MUVAC=/path/to/install/dir"
 INSDIR=$MUVAC
-for f in {$INSDIR/latest/bashbone/lib/*.sh,$INSDIR/latest/muvac/lib/*.sh}; do
+source $INSDIR/latest/bashbone/activate.sh || die "install directory cannot be found"
+unset JAVA_HOME #activate.sh loads java 12 into path which lets gatk4 fail with IncompatibleClassChangeError
+for f in $INSDIR/latest/muvac/lib/*.sh; do
 	source $f
 done
-export MALLOC_ARENA_MAX=4
-export PATH=$(readlink -e $INSDIR/latest/* | grep -v java | xargs -echo | sed 's/ /:/g'):$PATH #<- avoid loading java 12
-export PATH=$(readlink -e $INSDIR/latest/*/scripts | xargs -echo | sed 's/ /:/g'):$PATH
-# configure::environment -i $INSDIR <- loads java 12 into path with lets gatk4 fail with IncompatibleClassChangeError
 
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
@@ -103,7 +99,7 @@ else
 fi
 
 commander::print "muvac v$version started with command: $CMD" > $LOG || die "cannot access $LOG"
-commander::print "temporary files go to: $TMPDIR" >> $LOG
+commander::print "temporary files go to $HOST:$TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
 if [[ $TFASTQ1 ]]; then
