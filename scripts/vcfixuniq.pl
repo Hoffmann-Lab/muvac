@@ -31,8 +31,8 @@ sub select (){
     my %gq;
     for my $m (@mem){
         my @m = split /\s+/ , $m;
-        my ($i) = indexes { $_ =~ /^GQ$/i } split /:/,$m[-2];
-        my ($j) = indexes { $_ =~ /^MAF$/i } split /:/,$m[-2];
+        my ($i) = indexes { $_ =~ /^GQ$/i } split /:/,$m[8];
+        my ($j) = indexes { $_ =~ /^MAF$/i } split /:/,$m[8];
         my @v = split /:/,$m[-1];
         $m[-1] = join ":",@v;
         $m = join "\t",@m;

@@ -99,7 +99,7 @@ else
 fi
 
 commander::print "muvac v$version started with command: $CMD" > $LOG || die "cannot access $LOG"
-commander::print "temporary files go to $HOST:$TMPDIR" >> $LOG
+commander::print "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
 if [[ $TFASTQ1 ]]; then

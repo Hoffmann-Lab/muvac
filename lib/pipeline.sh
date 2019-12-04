@@ -209,7 +209,7 @@ pipeline::germline() {
 			-s ${SKIPrg:=false} \
 			-t $THREADS \
 			-m $MEMORY \
-			-n ${RGPREFIX:=''} \
+			-n ${RGPREFIX:='SAMPLE'} \
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
@@ -296,8 +296,34 @@ pipeline::germline() {
 			-t $THREADS \
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
-			-r mapper && \
-		pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
+			-r mapper
+	} || return 1
+
+	if [[ $PON ]]; then
+		{	pipeline::_slice $($sliced || ${SKIPpon:=false} || ${NOpon:=false} && echo true || echo false) && \
+			callvariants::panelofnormals \
+				-S ${NOpon:=false} \
+				-s ${SKIPpon:=false} \
+				-t $THREADS \
+				-g $GENOME \
+				-m $MEMORY \
+				-r mapper \
+				-c slicesinfo \
+				-p $TMPDIR \
+				-o $OUTDIR/variants && \
+			callvariants::makepondb \
+				-S ${NOpondb:=false} \
+				-s ${SKIPpondb:=false} \
+				-t $THREADS \
+				-g $GENOME \
+				-r mapper \
+				-p $TMPDIR \
+				-o $OUTDIR/variants
+		} || return 1
+		return 0
+	fi
+
+	{	pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
 		callvariants::haplotypecaller \
 			-S ${NOhc:=false} \
 			-s ${SKIPhc:=false} \
@@ -440,7 +466,7 @@ pipeline::somatic() {
 			-p $TMPDIR \
 			-o $OUTDIR/mapped \
 			-r mapper && \
-		pipeline::_slice $($sliced || ${SKIPhc:=false} || ${NOhc:=false} && echo true || echo false) && \
+		pipeline::_slice $($sliced || ${SKIPmu:=false} || ${NOmu:=false} && echo true || echo false) && \
 		callvariants::mutect \
 			-S ${NOmu:=false} \
 			-s ${SKIPmu:=false} \
@@ -451,6 +477,7 @@ pipeline::somatic() {
 			-1 NIDX \
 			-2 TIDX \
 			-c slicesinfo \
+			-d ${MYPON:=false} \
 			-p $TMPDIR \
 			-o $OUTDIR/variants
 	} || return 1

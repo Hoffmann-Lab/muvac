@@ -39,8 +39,10 @@ options::usage() {
 		
 		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
 		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
-		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)
-		-rgn     | --readgroup-name [string]: sets custom read group name - use TUMOR or NORMAL for postponed somatic calls - default: ''
+		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)		
+		-rgn     | --readgroup-name [string]: sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
+		-pon     | --panelofnormals         : disables variant calling and instead prepares a panel of normals for subsequent somatic calls
+		-no-pondb| --no-pondatabase         : disables creation of panel of normals database
 
 		SOMATIC OPTIONS
 		-n1      | --normalfq1 [path,..]    : normal fastq input - single or first pair, comma seperated
@@ -49,6 +51,7 @@ options::usage() {
 		-t2      | --tumorfq2 [path,..]     : tumor fastq input - optional. second pair, comma seperated
 		-nm      | --normalmapped [path,..] : normal SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
 		-tm      | --tumormapped [path,..]  : tumor SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
+		-mypon   | --my-panelofnormals      : priorize own panel of normals database over [-g].pon.vcf.gz
 
 		GENERAL OPTIONS
 		-rx      | --regex                  : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
@@ -61,7 +64,7 @@ options::usage() {
 		-no-trim | --no-trimming            : disables quality trimming
 		-cor     | --correction             : enable majority based raw read error correction
 		-rrm     | --rrnafilter             : enable rRNA filter
-		-no-stats| --no-statistics          : disables fastq preprocessing statistics
+		-no-stats| --no-statistics          : disables fastq preprocessing and mapping statistics
 
 		ALIGNMENT OPTIONS
 		-split   | --split                  : enable split read mapping e.g. to call variants from RNA-Seq data
@@ -79,21 +82,20 @@ options::usage() {
 		-no-bqsr | --no-qualrecalibration   : disables any base quality score recalibration (BQSR)
 		-no-dbsnp| --no-dbsnp               : disbale dbSNP usage for BQSRecalibration
 
-		VARIANT CALLER OPTIONS
-		-no-hc   | --no-haplotypecaller     : disables variant caller GATK HaplotypeCaller
-		-no-mu   | --no-mutect              : disables variant caller GATK MuTect2
-		-no-fb   | --no-freebayes           : disables variant caller Freebayes
-		-no-bt   | --no-bcftools            : disables variant caller Bcftools
-		-no-pp   | --no-platypus            : disables variant caller Platypus
-		-no-vs   | --no-varscan             : disables variant caller VarScan
-		-no-vd   | --no-vardict             : disables variant caller VarDict
-
 		REFERENCES
 		(c) Konstantin Riege
 		konstantin.riege{a}leibniz-fli{.}de
 	EOF
 	exit 0
 }
+# 		VARIANT CALLER OPTIONS
+# 		-no-hc   | --no-haplotypecaller     : disables variant caller GATK HaplotypeCaller
+# 		-no-mu   | --no-mutect              : disables variant caller GATK MuTect2
+# 		-no-fb   | --no-freebayes           : disables variant caller Freebayes
+# 		-no-bt   | --no-bcftools            : disables variant caller Bcftools
+# 		-no-pp   | --no-platypus            : disables variant caller Platypus
+# 		-no-vs   | --no-varscan             : disables variant caller VarScan
+# 		-no-vd   | --no-vardict             : disables variant caller VarDict
 
 options::developer() {
 	cat <<- EOF
@@ -102,12 +104,11 @@ options::developer() {
 
 		DEVELOPER OPTIONS
 		md5   : check for md5sums and if necessary trigger genome indexing
-		qual  : quality analysis
+		qual  : quality analysis for input and trim, clip, cor, rrm
 		trim  : trimming
 		clip  : adapter clipping
 		cor   : raw read correction
 		rrm   : rRNA filtering
-		stats : proprocessing statistics
 		sege  : Segemehl mapping
 		star  : STAR mapping
 		bwa   : BWA mapping
@@ -116,21 +117,24 @@ options::developer() {
 		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
 		rg    : read group modification
 		rmd   : removing duplicates
+		stats : proprocessing and mapping statistics
 		nsplit: splitting split-read alignments
 		reo   : bam reordering according to genome
 		laln  : left alignment
 		bqsr  : BQSRecalibration
 		idx   : intermediate and final bam indexing
+		pon   : panel of normals
+		pondb : panel of normals database
 		hc    : haplotypecaller
 		mu    : mutect
-		bt    : bcftools
-		fb    : freebayes
-		pp    : platypus
-		vs    : varscan
-		vd    : vardict
 	EOF
 	exit 0
 }
+		# bt    : bcftools
+		# fb    : freebayes
+		# pp    : platypus
+		# vs    : varscan
+		# vd    : vardict
 
 options::checkopt (){
 	local arg=false
@@ -162,11 +166,14 @@ options::checkopt (){
 		-d   | --distance) arg=true; DISTANCE=$2;;
 		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
 		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
+		-pon | --panelofnormals) PON=true;;
+		-mypon | --my-panelofnormals) MYPON=true;;
+
 
 	   	-resume | --resume-from)
 			arg=true
 			# don't Smd5, Sslice !
-			for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 				[[ "$2" == "$s" ]] && break
 				eval "SKIP$s=true"
 			done
@@ -175,7 +182,7 @@ options::checkopt (){
 			arg=true
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in md5 qual trim clip cor rrm stats sege star bwa uniq sort slice rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+				for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 					[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 				done
 			done
@@ -183,12 +190,12 @@ options::checkopt (){
 		-redo | --redo)
 			arg=true
 			# don't Smd5, Sslice !
-			for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 				eval "SKIP$s=true"
 			done
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in qual trim clip cor rrm stats sege star bwa uniq sort rg rmd nsplit reo laln bqsr idx hc mu bt fb pp vs vd; do
+				for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 					[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 				done
 			done
@@ -215,6 +222,7 @@ options::checkopt (){
 		-no-realn | --no-realign) NOrealn=true;;
 		-no-bqsr  | --no-qualrecalibration) NObqsr=true;;
 		-no-dbsnp | --no-dbsnp) NOdbsnp=true;;
+		-no-pondb | --no-pondatabase) NOpondb=true;;
 
 		-no-hc    | --no-haplotypecaller) NOhc=true;;
 		-no-mu    | --no-mutect) NOmu=true;;
