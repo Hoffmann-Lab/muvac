@@ -179,11 +179,7 @@ my $caller='';
 
                 $v[$i] = min(sum(@ad), $v[$i]); #varscan, vardict and freebayes fix DP >= sum(AD|DP4) - (== total COV, not filtered depth), whereas AD values are based on filtered reads
                 my $cov = max(sum(@ad), sum(@dp4), $v[$i]); #try to find real COV
-                if($s==9){
-                    @ad = ($ad[0]);
-                } else {
-                    shift @ad;
-                }
+                shift @ad;
                 my @maf;
                 push @maf, $cov == 0 ? 0 : sprintf("%.4f",$_/$cov) for @ad;
                 $_=~s/(\.[^0]*)0+$/$1/ for @maf;
