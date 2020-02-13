@@ -1,139 +1,121 @@
-### INFO
-muvac is a fully multithreaded pipeline to call, merge and annotate germline or somatic variants
-- from mappings in BAM format
-- or from RAW sequencing WG/exon/RNA experiments in FastQ format either Phred33 or Phred64 encoded (uncompressed, gzip or bzip2),
-- trimmed using Trimmomatic,
-- corrected using Rcorrector for germline variant screening,
-- mapped by Segemehl, TopHat2, BWA, STAR
-- using callers Freebayes, HaplotypeCaller, MuTect2, Samtools/Bcftools, Platypus, Samtools/VarScan, VarDict, LoFreq, deepSNV
--> splitting multiallic hits and unifying vcf formats
-- and using annotation tools Annovar, SnpEff
+# MUVAC
+**MUVAC** is an ultra fast germline and somatic variant caller pipeline for model and non-model organisms.
+It implements **GATK best practices** and beyond in an optimized, parallelized fashion.
 
-### INSTALLATION
-1) you need to be root to install dependencies, unless already present (to check this go on with step 2)
-sudo apt-get update
-sudo apt-get install cmake git g++ gcc make python-dev automake curl
-2) create a shell variable MUVAC assigned to an installation directory
-export MUVAC=/path/to/install/dir
-3) store the MUVAC variable permanently to ensure that muvac can always find the required tools
-echo "export MUVAC=$MUVAC" >> ~/.bashrc
-4) download the latest muvac release from https://github.com/koriege/muvac
-git clone --recursive https://github.com/koriege/muvac.git
-5) enter the muvac directory 
-cd muvac
-6) checkout latest stable release
-git checkout $(git describe --tags)
-7) install all tools for variant calling
-./setup -i all
-8) (optional) install variant annotation tools for hg19
-./setup -i anno [-t <number>] [-annovar <url>]
-- use '-t <number>' option to run compiler and databse indexing on <number> cpu cores (default: all)
-- use '-annovar <url>' as optional option to install Annovar 
-- get Annovar download url from http://annovar.openbioinformatics.org/
+MUVAC can be applied on 
+- RAW FASTQ (Exome-Seq/WG-Seq/RNA-Seq) data 
+- BAM alignment files of different preprocessing states
 
-### UPGRADE
-1) follow the INSTALLATION steps 4 to 6
-./setup -i upgrade
+MUVAC makes use of my **bashbone** bash library, designed as a comprehensive collection of function for 
+NGS data analyses and visualization, which can be easily extended. Furthermore, bashbone offers extended
+functionality to parse options, to write and execute commands (or series thereof) of any programming language
+directly in your bash script and to log their outputs in different verbosity levels. It also supports object
+oriented like member function for bash arrays and associative arrays (hashes).
 
-### DOWNLOAD HG19/GRCh37.p13 or HG38/GRCh38.p7 or MM10/GRCm38.p6 and corresponding dbSNP vcf
-./dlgenome -g [hg19|hg38|mm10] -o /path/to/genome/dir
+To see a full list of functions, complete the INSTALLATION procedure (see below) and run
+```
+source $MUVAC/latest/bashbone/activate.sh
+bashbone -h
+``` 
+> Each function comes with its own usage:
+> ```
+> ...
+> preprocess::trimmomatic -h
+> cluster::coexpression -h
+> enrichment::go -h
+> ...
+> ```
 
-### FIRST RUN INFO
+## INSTALLATION
+The installation does not require root permissions. All necessary tools are shipped via conda or will be
+compiled locally. To do so just run
+```
+export MUVAC=/path/to/muvac/installation
+./setup.sh -i all -d $MUVAC
+```
+
+## DOWNLOAD GENOMES
+HG19, HG38, MM10 genomes, annotations (GTF, GO) and corresponding dbSNP can be retrieved via
+```
+$MUVAC/latest/bashbone/scripts/dlgenome.sh -g [hg19|hg38|mm10] -s -d -o [/path/to/genome/dir]
+```
+
+## UPGRADE
+In case a new bashbone or MUVAC version is available, run
+```
+./setup.sh -i upgrade -d $MUVAC
+```
+To revert to an older release, simply re-define the symlinks in the $MUVAC/lastest directory
+
+
+## RUN
+# FIRST RUN INFO
 - genomes will be indexed for selected mappers
-=> do not run multiple muvac instances in parallel unless indexes are created
-- in case indexes are already present 
-=> copy $MUVAC/bin/muvac/lib/md5s to <genome.fa>.md5s and insert values returned by the command 'md5sum <file>'
+=> do not run multiple MUVAC instances in parallel unless indexes are created
+- in case indexes are already present
+=> copy $MUVAC/latest/bashbone/lib/md5.sh to [genome].fa.md5.sh and insert values returned by the command 'md5sum [file]'
 
-### RUN
+# ADDITIONAL INFO
+Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY
+This requierement needs to be fulfilled in all associated VCF files, too - see below.
+HG19, HG38 or MM10 genome and dbSNP can be retrieved using the script: $MUVAC/latest/bashbone/dlgenome.sh
+
+To obtain panel of normals, common somatic variants and population variants with allele frequencies visit
+HG38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
+HG19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
+After download, place the files next to your genome fasta file with equal name plus extension suffix as shown
+[genome].fa.somatic_common.vcf.gz, genome.fa.somatic_common.vcf.gz.tbi
+[genome].fa.pon.vcf.gz, genome.fa.pon.vcf.tbi
+[genome].fa.af_only_gnomad.vcf.gz, genome.fa.af_only_gnomad.vcf.gz.tbi
+
+Analogously, obtain a dbSNP file, extract and re-name it to: [genome].fa.vcf
+HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
+HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/	
+
+# SUMMARY
+- on the very first execution of MUVAC, do not run multiple instances in parallel
 - make sure to have your genome and dbSNP vcf file in the same directory
 - make sure your genome file ends with '.fa' and your dbSNP file ends with '.fa.vcf'
-- make sure the file name prefixes of your genome and dbSNP file are equal (e.g. hg19.fa and hg19.fa.vcf)
+- make sure your genome file ends with '.fa' and vcf.gz files ends with '.somatic_common.vcf.gz', '.pon.vcf.gz', '.af_only_gnomad.vcf.gz'
+- make sure the file name prefixes of your genome and vcf file are equal (e.g. hg19.fa and hg19.fa.vcf)
 - make sure the fasta headers in your genome are named and sorted this way '>chrM' '>chr1' ... '>chr22' '>chrX' '>chrY'
-=> following the DOWNLOAD instructions  will do this for you
 
-1) calling for help?
-$MUVAC/bin/muvac/muvac -h
-$MUVAC/bin/muvac/muvac-somatic -h
+# EXAMPLES
 
-2) adapt and use one of the terminal commands below
-$MUVAC/bin/muvac/muvac -1 R1.fq -2 R2.fq -g genomes/hg19.fa -o results -l results/run.log
-$MUVAC/bin/muvac/muvac -m 1.bam -g genomes/hg19.fa -o results -l results/run.log
-$MUVAC/bin/muvac/muvac-somatic -n1 normalR1.fq -n2 normalR2.fq -t1 tumorR1.fq -t2 tumorR2.fq -g genomes/hg19.fa -o results -l results/run.log
-$MUVAC/bin/muvac/muvac-somatic -nm normal.bam -tm tumor.bam -g genomes/hg19.fa -o results -l results/run.log
+...todo...
 
-- for RNA-Seq data use the '-split' option
-$MUVAC/bin/muvac/muvac -1 R1.fq -2 R2.fq -split -g genomes/hg19.fa -o results -l results/run.log
-
-- for multiple experiments, concatenate inputs using ','
-$MUVAC/muvac -1 patient1_1.fq,patient2_1.fq -2 patient1_2.fq,patient2_2.fq -g genomes/hg19.fa -o results -l results/run.log
-
-3) if no adapter clipping is necessary just call muvac this way
-(echo 'n') | $MUVAC/bin/muvac/muvac [options]
-(echo 'n') | $MUVAC/bin/muvac/muvac-somatic [options]
-
-### LOGS and verbosity
-- a comprehensive log file 'run.log' file will be created in your output directory, unless defined otherwise
-- using the verbose option '-v' will additionally print full log to terminals stdout
-
-### RUN IN BACKGROUND
-1) start a screen with a unique name
-screen -S myMUVACrun
-2) run muvac
-3) detach the screen by pressing all 3 keys 'ctrl+a+d'
-4) list screens running in background
-screen -ls
-4) resume a screen 
-screen -r myMUVACrun
-
-### RESULTS
-- results can be found in the vcf/(segemehl|tophat|bwa|star) directories
-- merged multi-caller germline variants are named *.merged.vcf and can be visualized e.g. using Varvis
-- germline variant annotations can be found in the annotation/(segemehl|tophat|bwa|star)/(annovar|snpeff) directories
-
-### INFO: RESULTS
-- bcftools-norm is used to split multiallelic report into single reports with related genotype (GT) and genotype quality (GQ)
-=> muvac returns the best variants according to highest GQ (re-computed from PL or GL) or minor allele frequency (MAF)
-- vcfsamplediff is used to extract somatic variants from FreeBayes and Platypus outputs
-
-### INFO: GERMLINE ANNOTATION RESULTS
-1) Annovar (see http://annovar.openbioinformatics.org/en/latest/user-guide/download)
-- gene annotations (refSeq) are named 
-  *.variant_function and *.exonic_variant_function
-- region annotations (TFBS, miRNA/snoRNA, miRNA-BS, GWAS) are named 
-  *.hg19_(tfbsConsSites|wgRna|targetScanS|gwasCatalog) 
-- filtered annotations (NHLBI-ESP, 1000 Genomes, ExAC, dbSNP, NSFP, ClinVar) are named 
-  *.hg19_(esp6500siv2_all|1000g2015aug_all|exac03|avsnp147|dbnsfp33a|clinvar_20170130)_dropped
-- merged annotations are named *.hg19_multianno.vcf
-2) SnpEff (see http://snpeff.sourceforge.net/SnpSift.html)
-- gene annotations (Ensembl, TFBS, Nextprot) are named *.annotated.vcf
-- region annotations (Ensembl promoter, Ensembl miRNA TSS) are named *.(promoter|miRNApromoter).vcf
-- filtered annotations (ExAC, dbSNP, NSFP, ClinVar) are named *.(exac|dbsnp|dbnsfp|clinvar).vcf
-
-### INTERMEDIATE RESULTS (in processing order)
-- qualities directory: raw read quality statistics by FastQC
-- converted directory: phred64 to phred33 quality converted raw reads by fastx_toolkit
-- trimmed directory: quality trimmed reads by Trimmomatic
-- corrected directory: error corrected reads by Rcorrector
-- mapped/(segemehl|tophat|bwa|star) directory: mapping data *.bam of Segemehl|TopHat2|BWA
-- mapped/(segemehl|tophat|bwa|star) directory: realigned (GATK) and reaclibrated mapping data *.bam by GATK or LoFreq
-
-### GENERAL CALLER PARAMETER
-if adjustable, all callers are constrained by
-min reads DP >= 10
-germline allele frequency >= 0.1
-somatic allele frequency >= 0.1
-alternative alleles <= 3
-min base quality >= 20
-max variances = all
-downsampling = off
-expected alleles <=3
-
-### ISSUES and TODOs
-- LoFreq and deepSNV resuls will be unprocessed and are excluded from annotation, unification and condensation
-
-### REFERENCES
+## REFERENCES
 (c) Konstantin Riege
 konstantin{a}bioinf{.}uni-leipzig{.}de
 konstantin.riege{a}leibniz-fli{.}de
 
 In case of troubles, don't hesitate to contact me
+
+## UTILITIES
+Tool | Description | Reference
+:---: | :--- | :---
+segemehl | Short sequence read to reference genome mapper | [Otto et al. 2014](https://doi.org/10.1093/bioinformatics/btu146)
+Cutadapt | Error-tolerant adapter removal tool for High-Throughput Sequencing reads | [Martin 2011](https://doi.org/10.14806/ej.17.1.200)
+FastQC | A quality control tool for high throughput sequence data | [Andrews](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+Trimmomatic | Quality control tool for read trimming and filtering of Illumina NGS data | [Bolger et al. 2014](https://doi.org/10.1093/bioinformatics/btu170)
+Rcorrector | A kmer-based error correction method for RNA-seq data | [Song et al. 2015](https://doi.org/10.1186/s13742-015-0089-y)
+SortMeRNA | A tool for filtering, mapping and OTU-picking NGS reads in metatranscriptomic and -genomic data | [Kopylova et al. 2011](https://doi.org/10.1093/bioinformatics/bts611)
+SAMtools | Utilities for manipulating alignments in the SAM format | [Heng et al. 2009](https://doi.org/10.1093/bioinformatics/btp352)
+BEDTools | Utilities for genome arithmetic | [Quinlan et al. 2010](https://doi.org/10.1093/bioinformatics/btq033)
+
+todo:
+GATK
+VT
+BCFtools
+biomartR
+sratoolkit
+vcflib
+bgzip
+tabix
+
+todo info:
+add GQ, MAF, COV, ...
+split multiallelic hits, keep best
+
+upcoming release:
+variable site based tree inference with raxml

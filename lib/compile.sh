@@ -8,8 +8,6 @@ compile::all(){
 	{	compile::muvac -i "$insdir" -t $threads && \
 		compile::bashbone -i "$insdir" -t $threads && \
 		compile::conda -i "$insdir" -t $threads && \
-		compile::java -i "$insdir" -t $threads && \
-		compile::perlmodules -i "$insdir" -t $threads && \
 		compile::sortmerna -i "$insdir" -t $threads && \
 		compile::segemehl -i "$insdir" -t $threads && \
 		compile::knapsack -i "$insdir" -t $threads
@@ -52,29 +50,28 @@ compile::upgrade(){
 compile::conda() {
 	local insdir threads
 	compile::_parse -r insdir -s threads "$@"
-	shift $# # necessary for conda activate
 
 	commander::print "installing conda and tools"
-	{	mkdir -p $insdir/conda && \
-		url='https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh' && \
+	{	url='https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh' && \
 		wget -q -O $insdir/miniconda.sh $url && \
+		version=$(bash $insdir/miniconda.sh -h | grep -F Installs | cut -d ' ' -f 3) && \
+		rm -rf $insdir/conda && \
+		mkdir -p $insdir/conda && \
 		bash $insdir/miniconda.sh -b -f -p $insdir/conda && \
 		rm $insdir/miniconda.sh && \
-		source $insdir/conda/bin/activate && \
-		conda create -y -n py2 python=2 && \
-		conda create -y -n py2r python=2 && \
-		conda create -y -n py3 python=3 && \
+
+		$insdir/conda/bin/conda env remove -n py2 && \
+		$insdir/conda/bin/conda env remove -n py3 && \
+		$insdir/conda/bin/conda create -y -n py2 python=2 && \
+		$insdir/conda/bin/conda create -y -n py2r python=2 && \
+		$insdir/conda/bin/conda create -y -n py3 python=3 && \
 		
-		# readline 7 causes library version number to be lower on the shared object warnings
-		# use gouarin gcc for r and perl module installation - defaults gcc has a weird usage
-		# under perl > 5.22 List::MoreUtils installation fails
 		# macs2, tophat2/hisat2 and R stuff needs python2 whereas cutadapt,idr,rseqc need python3 env
-		conda activate py2 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			gcc-7 libgcc-7 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			make automake zlib ncurses xz bzip2 pigz pbzip2 ghostscript htslib readline=6 perl=5.22 perl-threaded=5.22 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
+		
+		$insdir/conda/bin/conda install -n py2 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
+			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
+			perl perl-threaded perl-dbi perl-app-cpanminus perl-list-moreutils perl-try-tiny \
+			numpy scipy pysam cython \
 			datamash \
 			fastqc trimmomatic rcorrector \
 			star bwa hisat2 \
@@ -82,31 +79,18 @@ compile::conda() {
 			bcftools gatk4 freebayes varscan platypus-variant vardict vardict-java \
 			snpeff snpsift && \
 		chmod 755 $insdir/conda/envs/py2/bin/run_rcorrector.pl && \
-		pip install numpy scipy pysam cython && \
-		conda clean -y -a && \
 
-		conda activate py3 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			gcc-7 libgcc-7 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			make automake zlib ncurses xz bzip2 pigz pbzip2 ghostscript readline=6 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
+		$insdir/conda/bin/conda install -n py3 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
+			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
 			cutadapt rseqc && \
-		conda clean -y -a && \
 
-		conda activate py2r && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			gcc-7 libgcc-7 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
-			make automake zlib ncurses xz bzip2 pigz pbzip2 ghostscript readline=6 && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
+		$insdir/conda/bin/conda install -n py2r -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
+			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
 			r-devtools bioconductor-biocinstaller bioconductor-biocparallel \
-			bioconductor-genomicfeatures bioconductor-genefilter && \
-		conda install -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c gouarin \
+			bioconductor-genomicfeatures bioconductor-genefilter \
 			r-dplyr r-ggplot2 r-gplots r-rcolorbrewer r-svglite r-pheatmap r-ggpubr r-treemap r-rngtools && \
-		conda clean -y -a && \
 
-		conda deactivate
+		$insdir/conda/bin/conda clean -y -a
 	} || return 1
 
 	return 0

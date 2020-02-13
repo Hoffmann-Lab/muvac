@@ -4,7 +4,9 @@
 options::usage() {
 	cat <<- EOF
 		DESCRIPTION
-
+		MUVAC is an ultra fast germline and somatic variant caller pipeline for model and non-model organisms.
+		It implements GATK best practices in an optimized, parallelized fashion.
+		
 		VERSION
 		$version
 
@@ -36,7 +38,6 @@ options::usage() {
 		                                      NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
 
 		GERMLINE OPTIONS
-		
 		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
 		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
 		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)		
@@ -55,7 +56,7 @@ options::usage() {
 
 		GENERAL OPTIONS
 		-rx      | --regex                  : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
-		                                      NOTE: necessary for sucessfully duplicates removal
+		                                      NOTE: necessary for sucessful deduplication, if unavailable set to 'null'
 		-resume  | --resume-from [value]    : resume from a specific pipeline step - see -dev|--devel
 		-skip    | --skip [value,..]        : skip specific pipeline step(s) - see -dev|--devel, comma seperated
 		-redo    | --redo [value,..]        : just rerun specific pipeline step(s) - see -dev|--devel, comma seperated
@@ -70,21 +71,38 @@ options::usage() {
 		-split   | --split                  : enable split read mapping e.g. to call variants from RNA-Seq data
 		-d       | --distance               : maximum read alignment edit distance in % - default: 5
 		-i       | --insertsize             : maximum allowed insert for aligning mate pairs - default: 200000
-		-no-sege | --no-segemehl            : disables mapping by Segemehl
+		-no-sege | --no-segemehl            : disables mapping by segemehl
 		-no-star | --no-star                : disables mapping by STAR
 		-no-uniq | --no-uniqify             : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                : disables sorting alignments
-		-no-rmd  | --no-removeduplicates    : disables removing duplicates - not recommended
-		-no-adgrp| --no-addreadgroup        : breaks all callers! disables proper read group modification by Picard
-		-no-reo  | --no-reordering          : breaks GATK callers! disables reordering according to genome file by Picard
-		-no-laln | --no-leftalign           : disables left alignment by GATK - not recommended for Bcftools, LoFreq and VarScan
-		-no-realn| --no-realign             : disables indel realignment by GATK - not recommended for Bcftools, LoFreq and VarScan
+		-no-rmd  | --no-removeduplicates    : disables removing duplicates
+		-no-adgrp| --no-addreadgroup        : disables proper read group modification by Picard
+		-no-reo  | --no-reordering          : disables reordering according to genome file by Picard
+		-no-laln | --no-leftalign           : disables left alignment by GATK
+		-no-realn| --no-realign             : disables indel realignment by GATK
 		-no-bqsr | --no-qualrecalibration   : disables any base quality score recalibration (BQSR)
-		-no-dbsnp| --no-dbsnp               : disbale dbSNP usage for BQSRecalibration
+		-no-dbsnp| --no-dbsnp               : disbale dbSNP usage for BQSRecalibration and variant calling
 
 		REFERENCES
 		(c) Konstantin Riege
 		konstantin.riege{a}leibniz-fli{.}de
+
+		ADDITIONAL INFORMATION
+		Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY
+		This requierement needs to be fulfilled in all additional VCF files, too - see below.
+		HG19, HG38 or MM10 genome and dbSNP can be retrieved using the script: $MUVAC/latest/bashbone/dlgenome.sh
+
+		To obtain panel of normals, common somatic variants and population variants with allele frequencies visit
+		HG38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
+		HG19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
+		After download, place files next to your genome fasta file with equal name plus extension suffix as shown
+		genome.fa.somatic_common.vcf.gz, genome.fa.somatic_common.vcf.gz.tbi
+		genome.fa.pon.vcf.gz, genome.fa.pon.vcf.tbi
+		genome.fa.af_only_gnomad.vcf.gz, genome.fa.af_only_gnomad.vcf.gz.tbi
+
+		Analogously, obtain a dbSNP file, extract and re-name it: genome.fa.vcf
+		HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
+		HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/	
 	EOF
 	exit 0
 }
@@ -157,7 +175,7 @@ options::checkopt (){
 		-1   | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 <<< $2; NFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ1[-1]}")";;
 		-2   | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 <<< $2; NFASTQ2[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ2[-1]}")";;
 		-t1  | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 <<< $2; TFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${TFASTQ1[-1]}")";;
-		-t2  | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 <<< $2; TFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${TFASTQ1[-1]}")";;
+		-t2  | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 <<< $2; TFASTQ2[-1]="$(sed -r 's/\s*\n*$//' <<< "${TFASTQ2[-1]}")";;
 		-m   | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED <<< $2; NMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${NMAPPED[-1]}")"; NOqual=true; NOtrim=true; NOcor=true; NOrrm=true; NOsege=true; NOstar=true; NObwa=true;;
 		-tm  | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED <<< $2; TMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${TMAPPED[-1]}")";;
 		-rx  | --regex) arg=true; REGEX=$2;;

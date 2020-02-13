@@ -2,8 +2,6 @@
 # (c) Konstantin Riege
 
 pipeline::_preprocess(){
-	source $INSDIR/conda/bin/activate py2
-
 	${SKIPmd5:=false} || {
 		[[ ! -s $GENOME.md5.sh ]] && cp $INSDIR/latest/bashbone/lib/md5.sh $GENOME.md5.sh
 		source $GENOME.md5.sh
