@@ -188,15 +188,19 @@ options::checkopt (){
 		-mypon | --my-panelofnormals) MYPON=true;;
 
 
-	   	-resume | --resume-from)
+		-resume | --resume-from)
 			arg=true
+			local enable=false
 			# don't Smd5, Sslice !
 			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-				[[ "$2" == "$s" ]] && break
-				eval "SKIP$s=true"
+				eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
+				$enable || [[ "$2" == "$s" ]] && {
+					enable=true
+					eval "SKIP$s=false"
+				}
 			done
 		;;
-	    -skip   | --skip) 
+		-skip | --skip)
 			arg=true
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
@@ -209,7 +213,7 @@ options::checkopt (){
 			arg=true
 			# don't Smd5, Sslice !
 			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-				eval "SKIP$s=true"
+				eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 			done
 			mapfile -d ',' -t <<< $2
 			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element

@@ -211,20 +211,26 @@ pipeline::germline() {
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped && \
-		pipeline::_slice $($sliced || ${SKIPrmd:=false} || ${NOrmd:=false} && echo true || echo false) && \
-		alignment::rmduplicates \
-			-S ${NOrmd:=false} \
-			-s ${SKIPrmd:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-r mapper \
-			-c slicesinfo \
-			-x "$REGEX" \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped && \
-		alignment::add4stats -r mapper && \
-		alignment::bamstats \
+			-o $OUTDIR/mapped
+	} || return 1
+
+	${NOrmd:=false} || {
+		{	pipeline::_slice $($sliced || ${SKIPrmd:=false} || ${NOrmd:=false} && echo true || echo false) && \
+			alignment::rmduplicates \
+				-S ${NOrmd:=false} \
+				-s ${SKIPrmd:=false} \
+				-t $THREADS \
+				-m $MEMORY \
+				-r mapper \
+				-c slicesinfo \
+				-x "$REGEX" \
+				-p $TMPDIR \
+				-o $OUTDIR/mapped && \
+			alignment::add4stats -r mapper
+		} || return 1
+	}
+		
+	{	alignment::bamstats \
 			-S ${NOstats:=false} \
 			-s ${SKIPstats:=false} \
 			-r mapper \
@@ -380,20 +386,26 @@ pipeline::somatic() {
 			-2 TIDX \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/mapped && \
-		pipeline::_slice $($sliced || ${SKIPrmd:=false} || ${NOrmd:=false} && echo true || echo false) && \
-		alignment::rmduplicates \
-			-S ${NOrmd:=false} \
-			-s ${SKIPrmd:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-r mapper \
-			-c slicesinfo \
-			-x "$REGEX" \
-			-p $TMPDIR \
 			-o $OUTDIR/mapped
-		alignment::add4stats -r mapper && \
-		alignment::bamstats \
+	} || return 1
+
+	${NOrmd:=false} || {
+		{	pipeline::_slice $($sliced || ${SKIPrmd:=false} || ${NOrmd:=false} && echo true || echo false) && \
+			alignment::rmduplicates \
+				-S ${NOrmd:=false} \
+				-s ${SKIPrmd:=false} \
+				-t $THREADS \
+				-m $MEMORY \
+				-r mapper \
+				-c slicesinfo \
+				-x "$REGEX" \
+				-p $TMPDIR \
+				-o $OUTDIR/mapped && \
+			alignment::add4stats -r mapper
+		} || return 1
+	}
+			
+	{	alignment::bamstats \
 			-S ${NOstats:=false} \
 			-s ${SKIPstats:=false} \
 			-r mapper \
