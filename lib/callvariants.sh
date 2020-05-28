@@ -152,7 +152,7 @@ callvariants::haplotypecaller() {
 						--max-alternate-alleles 3
 						--all-site-pls true
 						-verbosity INFO
-						--tmp-dir $tmpdir
+						--tmp-dir "$tmpdir"
 				CMD
 
 				commander::makecmd -a cmd2 -s '|' -c {COMMANDER[0]}<<- CMD
@@ -183,9 +183,9 @@ callvariants::haplotypecaller() {
 			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
 				#DO NOT PIPE - DATALOSS!
 				commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
-					bcftools concat -o "$t.vcf" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
+					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T $tmpdir -m ${memory}M -o "$o.$e" "$t.vcf"
+					bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
@@ -295,7 +295,7 @@ callvariants::panelofnormals() {
 						--min-base-quality-score 20
 						--native-pair-hmm-threads $mthreads
 						-verbosity INFO
-						--tmp-dir $tmpdir
+						--tmp-dir "$tmpdir"
 						--max-mnp-distance 0
 				CMD
 
@@ -305,12 +305,13 @@ callvariants::panelofnormals() {
 			o="$(basename "${_bams_panelofnormals[$i]}")"
 			t="$tdir/${o%.*}"
 			o="$odir/${o%.*}"
+			
 
 			#DO NOT PIPE - DATALOSS!
 			commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 				bcftools concat -o "$t.pon.vcf" $(printf '"%s" ' "${tomerge[@]}")
 			CMD
-				bcftools sort -T $tmpdir -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
+				bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
 			CMD
 		done
 	done
@@ -418,7 +419,7 @@ callvariants::makepondb() {
 				$(printf ' -V "%s" ' "${tomerge[@]}")
 				--genomicsdb-workspace-path "$odir/pondb"
 				--verbosity INFO
-				--tmp-dir $tmpdir
+				--tmp-dir "$tmpdir"
 		CMD
 		#rm pondb becase this does not work yet: --overwrite-existing-genomicsdb-workspace true 
 
@@ -438,7 +439,7 @@ callvariants::makepondb() {
 				-R "$genome"
 				-O "$odir/pon.vcf.gz"
 				--verbosity INFO
-				--tmp-dir $tmpdir
+				--tmp-dir "$tmpdir"
 		CMD
 	done
 
@@ -583,7 +584,7 @@ callvariants::mutect() {
 						--min-base-quality-score 20
 						--native-pair-hmm-threads $mthreads
 						--verbosity INFO
-						--tmp-dir $tmpdir
+						--tmp-dir "$tmpdir"
 						--max-mnp-distance 0
 				CMD
 				# --max-mnp-distance 0
@@ -606,7 +607,7 @@ callvariants::mutect() {
 							-L "$genome.somatic_common.vcf.gz"
 							-O "$slice.pileups.table"
 							--verbosity INFO
-							--tmp-dir $tmpdir
+							--tmp-dir "$tmpdir"
 					CMD
 
 
@@ -628,7 +629,7 @@ callvariants::mutect() {
 							-O "$slice.contamination.table"
 							--tumor-segmentation "$slice.tumorsegments.table"
 							--verbosity INFO
-							--tmp-dir $tmpdir
+							--tmp-dir "$tmpdir"
 					CMD
 					params2=" --contamination-table '$slice.contamination.table' --tumor-segmentation '$slice.tumorsegments.table'"
 				else
@@ -651,7 +652,7 @@ callvariants::mutect() {
 						-stats "$slice.unfiltered.vcf.stats"
 						-O "$slice.vcf"
 						--verbosity INFO
-						--tmp-dir $tmpdir
+						--tmp-dir "$tmpdir"
 				CMD
 				#In order to tweak results in favor of more sensitivity users may set -f-score-beta to a value greater than its default of 1 (beta is the relative weight of sensitivity versus precision in the harmonic mean). Setting it lower biases results toward greater precision.
 				# optional: --tumor-segmentation segments.table
@@ -694,7 +695,7 @@ callvariants::mutect() {
 					$(printf ' -stats "%s" ' "${tomerge[@]/%/.unfiltered.vcf.stats}")
 					-O "$o.vcf.stats"
 					--verbosity INFO
-					--tmp-dir $tmpdir
+					--tmp-dir "$tmpdir"
 			CMD
 
 			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
@@ -702,7 +703,7 @@ callvariants::mutect() {
 				commander::makecmd -a cmd9 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T $tmpdir -m ${memory}M -o "$o.$e" "$t.$e"
+					bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd10 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
