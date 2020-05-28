@@ -185,7 +185,7 @@ callvariants::haplotypecaller() {
 				commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
+					bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
@@ -311,7 +311,7 @@ callvariants::panelofnormals() {
 			commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 				bcftools concat -o "$t.pon.vcf" $(printf '"%s" ' "${tomerge[@]}")
 			CMD
-				bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
+				bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
 			CMD
 		done
 	done
@@ -703,7 +703,7 @@ callvariants::mutect() {
 				commander::makecmd -a cmd9 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T "\$(mktemp -d -p --suffix='.bcfsrt' '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
+					bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd10 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
