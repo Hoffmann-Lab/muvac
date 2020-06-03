@@ -4,7 +4,7 @@
 options::usage() {
 	cat <<- EOF
 		DESCRIPTION
-		MUVAC is an ultra fast germline and somatic variant caller pipeline for model and non-model organisms.
+		MUVAC is an ultra fast germline and somatic variant calling pipeline for model and non-model organisms.
 		It implements GATK best practices in an optimized, parallelized fashion.
 		
 		VERSION
