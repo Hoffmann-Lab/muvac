@@ -1,42 +1,57 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
-trap 'die' INT TERM
-trap 'sleep 1; kill -PIPE $(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+") &> /dev/null' EXIT
-shopt -s extglob
-shopt -s expand_aliases
+trap '
+	cleanup $?
+	sleep 1
+	pids=($(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+" | tail -n +2))
+	{ kill -KILL "${pids[@]}" && wait "${pids[@]}"; } &> /dev/null
+	printf "\r"
+' EXIT
+trap 'die "killed by sigint or sigterm"' INT TERM
 
 die() {
-	unset CLEANUP
-	echo -ne "\e[0;31m"
 	echo ":ERROR: $*" >&2
-	echo -ne "\e[m"
 	exit 1
 }
 
 cleanup() {
-	if [[ $CLEANUP ]]; then
-		local b e
-		for f in "${FASTQ1[@]}"; do
-			helper::basename -f "$f" -o b -e e
-			f=$b
-			[[ -e $TMPDIR ]] && find $TMPDIR -type f -name "$f*" -exec rm -f {} \;
-			if [[ -e $OUTDIR ]]; then
-				find $OUTDIR -type f -name "$f*.all" -exec rm -f {} \;
-				find $OUTDIR -type f -name "$f*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
-				find $OUTDIR -type f -name "$f*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
-			fi
-		done
-	fi
+	[[ -e $TMPDIR ]] && {
+		find $TMPDIR -type f -name "cleanup.*" -exec rm -f {} \;
+		find $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \;
+	}
+	[[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
+		echo ":INFO: removing temporary directory and unnecessary files"
+		[[ -e $TMPDIR ]] && {
+			find $TMPDIR -type f -exec rm -f {} \;
+			find $TMPDIR -type d -depth -exec rm -rf {} \;
+			rm -rf $TMPDIR
+		}
+		[[ -e $OUTDIR ]] && {
+			for f in "${FASTQ1[@]}"; do
+				readlink -e "$f" | file -f - | grep -qE '(gzip|bzip)' && b=$(basename $f | rev | cut -d '.' -f 3- | rev) || b=$(basename $f | rev | cut -d '.' -f 2- | rev)
+				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
+				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
+				find $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
+			done
+			local b
+			for f in "${MAPPED[@]}"; do
+				b=$(basename $f | rev | cut -d '.' -f 2- | rev)
+				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
+				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
+			done
+		}
+	}
 }
 
 [[ ! $MUVAC ]] && die "cannot find installation. please run setup and/or do: export MUVAC=/path/to/install/dir"
 INSDIR=$MUVAC
-source $INSDIR/latest/bashbone/activate.sh || die "install directory cannot be found"
+source $(dirname $(readlink -e $0))/bashbone/activate.sh -i $MUVAC -c true || die
+BASHBONEVERSION=$version
 unset JAVA_HOME #activate.sh loads java 12 into path which lets gatk4 fail with IncompatibleClassChangeError
-for f in $INSDIR/latest/muvac/lib/*.sh; do
-	source $f
+for f in $(dirname $(readlink -e $0))/lib/*.sh; do
+	source $f || die "unexpected error in source code - please contact developer"
 done
-
+VERSION=$version
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
 MAXMEMORY=$(grep -F -i memavailable /proc/meminfo | awk '{printf("%d",$2*0.9/1024)}')
@@ -60,7 +75,7 @@ else
 	SKIPslice=false
 	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
 	TMPDIR=$(readlink -e $TMPDIR)
-	TMPDIR=$(mktemp -p $TMPDIR -d --suffix=.muvac) || die "cannot access $TMPDIR"
+	TMPDIR=$(mktemp -d -p $TMPDIR muvac.XXXXXXXXXX) || die "cannot access $TMPDIR"
 fi
 
 [[ ! $LOG ]] && LOG=$OUTDIR/run.log
@@ -98,15 +113,27 @@ else
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
 
-commander::print "muvac v$version started with command: $CMD" > $LOG || die "cannot access $LOG"
+commander::print "muvac $VERSION utilizing bashbone $BASHBONEVERSION started with command: $CMD" > $LOG || die "cannot access $LOG"
 commander::print "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
+${Smd5:=false} || {
+	[[ ! -s $GENOME.md5.sh ]] && cp $(dirname $(readlink -e $0))/bashbone/lib/md5.sh $GENOME.md5.sh
+	source $GENOME.md5.sh
+}
+[[ ! $FASTQ2 ]] && NOcmo=true
 if [[ $TFASTQ1 ]]; then
-	pipeline::somatic >> $LOG 2> >(tee -a $LOG >&2) || die
+	pipeline::somatic 2> >(tee -ai $LOG >&2) >> $LOG || die
 else
-	pipeline::germline >> $LOG 2> >(tee -a $LOG >&2) || die
+	pipeline::germline 2> >(tee -ai $LOG >&2) >> $LOG || die
 fi
+${Smd5:=false} || {
+	commander::print "finally updating genome and annotation md5 sums" >> $LOG
+	thismd5genome=$(md5sum $GENOME | cut -d ' ' -f 1)
+	[[ "$md5genome" != "$thismd5genome" ]] && sed -i "s/md5genome=.*/md5genome=$thismd5genome/" $GENOME.md5.sh
+	thismd5gtf=$(md5sum $GTF | cut -d ' ' -f 1)
+	[[ "$md5gtf" != "$thismd5gtf" ]] && sed -i "s/md5gtf=.*/md5gtf=$thismd5gtf/" $GENOME.md5.sh
+}
 
 commander::print "success" >> $LOG
 exit 0

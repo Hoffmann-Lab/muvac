@@ -109,7 +109,7 @@ callvariants::haplotypecaller() {
 	done
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6
+	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6 tdirs
 	for m in "${_mapper_haplotypecaller[@]}"; do
 		declare -n _bams_haplotypecaller=$m
 		tdir="$tmpdir/$m"
@@ -181,11 +181,12 @@ callvariants::haplotypecaller() {
 			o="$odir/${o%.*}"
 
 			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
+				tdirs+=("$(mktemp -d -p "$tdir" cleanup.XXXXXXXXXX)")
 				#DO NOT PIPE - DATALOSS!
 				commander::makecmd -a cmd5 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
+					bcftools sort -T "${tdirs[-1]}" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd6 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
@@ -212,11 +213,13 @@ callvariants::haplotypecaller() {
 			commander::runcmd -v -b -t $minstances -a cmd5 && \
 			commander::runcmd -v -b -t $instances -a cmd6
 		} || { 
+			rm -rf "${tdirs[@]}"
 			commander::printerr "$funcname failed"
 			return 1
 		}
 	}
 
+	rm -rf "${tdirs[@]}"
 	return 0
 }
 
@@ -265,7 +268,7 @@ callvariants::panelofnormals() {
 	read -r minstances mthreads jmem jgct jcgct < <(configure::jvm -T $threads -m $memory)
 
 	local m i o t e slice odir tdir
-	declare -a tomerge cmd1 cmd2 cmd3
+	declare -a tomerge cmd1 cmd2 cmd3 tdirs
 	for m in "${_mapper_panelofnormals[@]}"; do
 		declare -n _bams_panelofnormals=$m
 		odir="$outdir/$m"
@@ -306,12 +309,12 @@ callvariants::panelofnormals() {
 			t="$tdir/${o%.*}"
 			o="$odir/${o%.*}"
 			
-
+			tdirs+=("$(mktemp -d -p "$tdir" cleanup.XXXXXXXXXX)")
 			#DO NOT PIPE - DATALOSS!
 			commander::makecmd -a cmd2 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 				bcftools concat -o "$t.pon.vcf" $(printf '"%s" ' "${tomerge[@]}")
 			CMD
-				bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
+				bcftools sort -T "${tdirs[-1]}" -m ${memory}M -o "$o.pon.vcf" "$t.pon.vcf"
 			CMD
 		done
 	done
@@ -323,11 +326,13 @@ callvariants::panelofnormals() {
 		{	commander::runcmd -v -b -t $minstances -a cmd1 && \
 			commander::runcmd -v -b -t $threads -a cmd2
 		} || { 
+			rm -rf "${tdirs[@]}"
 			commander::printerr "$funcname failed"
 			return 1
 		}
 	}
 
+	rm -rf "${tdirs[@]}"
 	return 0
 }
 
@@ -375,24 +380,25 @@ callvariants::makepondb() {
 	done
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
 
-	local m i o tmp odir params
+	local m i o t odir params
 	declare -a tomerge cmd1 cmd2 cmd3
 	for m in "${_mapper_makepondb[@]}"; do
 		declare -n _bams_makepondb=$m
 		odir="$outdir/$m"
-		mkdir -p "$odir"
+		tdir="$tmpdir/$m"
+		mkdir -p "$odir" "$tdir"
 
 		tomerge=()
 		for i in "${!_bams_makepondb[@]}"; do
 			o="$(basename "${_bams_makepondb[$i]}")"
-			tmp="$tmpdir/$m/${o%.*}"
+			t="$tdir/${o%.*}"
 			o="$odir/${o%.*}"
 			[[ ! -s "$o.pon.vcf" ]] && commander::printerr "file does not exists $o.pon.vcf" && return 1
 
 			commander::makecmd -a cmd1 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD {COMMANDER[2]}<<- CMD {COMMANDER[4]}<<- CMD
-				bcftools reheader -s <(echo "NORMAL NORMAL$i") -o "$tmp.pon.vcf" "$o.pon.vcf"
+				bcftools reheader -s <(echo "NORMAL NORMAL$i") -o "$t.pon.vcf" "$o.pon.vcf"
 			CMD
-				mv "$tmp.pon.vcf" "$o.pon.vcf"
+				mv "$t.pon.vcf" "$o.pon.vcf"
 			CMD
 				bgzip -f -@ $ithreads < "$o.pon.vcf" > "$o.pon.vcf.gz"
 			CMD
@@ -526,7 +532,7 @@ callvariants::mutect() {
 	local params params2 m i o t slice odir tdir ithreads instances=$((${#_mapper_mutect[@]}*${#_tidx_mutect[@]}))
 	read -r instances ithreads < <(configure::instances_by_threads -i $instances -t 1 -T $threads)
 
-	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6 cmd7 cmd8 cmd9 cmd10
+	declare -a tomerge cmd1 cmd2 cmd3 cmd4 cmd5 cmd6 cmd7 cmd8 cmd9 cmd10 tdirs
 	for m in "${_mapper_mutect[@]}"; do
 		declare -n _bams_mutect=$m
 		odir="$outdir/$m"
@@ -699,11 +705,13 @@ callvariants::mutect() {
 			CMD
 
 			for e in vcf fixed.vcf fixed.nomulti.vcf fixed.nomulti.normed.vcf; do
+
+				tdirs+=("$(mktemp -d -p "$tdir" cleanup.XXXXXXXXXX)")
 				#DO NOT PIPE - DATALOSS!
 				commander::makecmd -a cmd9 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
 					bcftools concat -o "$t.$e" $(printf '"%s" ' "${tomerge[@]/%/.$e}")
 				CMD
-					bcftools sort -T "\$(mktemp -d --suffix='.bcfsrt' -p '$tmpdir')" -m ${memory}M -o "$o.$e" "$t.$e"
+					bcftools sort -T "${tdirs[-1]}" -m ${memory}M -o "$o.$e" "$t.$e"
 				CMD
 
 				commander::makecmd -a cmd10 -s '&&' -c {COMMANDER[0]}<<- CMD {COMMANDER[1]}<<- CMD
@@ -739,10 +747,12 @@ callvariants::mutect() {
 	 		commander::runcmd -v -b -t $instances -a cmd9 && \
 	 		commander::runcmd -v -b -t $instances -a cmd10
 		} || { 
+			rm -rf "${tdirs[@]}"
 			commander::printerr "$funcname failed"
 			return 1
 		}
 	}
 
+	rm -rf "${tdirs[@]}"
 	return 0
 }

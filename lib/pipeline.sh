@@ -2,13 +2,6 @@
 # (c) Konstantin Riege
 
 pipeline::_preprocess(){
-	${SKIPmd5:=false} || {
-		[[ ! -s $GENOME.md5.sh ]] && cp $INSDIR/latest/bashbone/lib/md5.sh $GENOME.md5.sh
-		source $GENOME.md5.sh
-		thismd5genome=$(md5sum $GENOME | cut -d ' ' -f 1)
-		[[ "$md5genome" != "$thismd5genome" ]] && sed -i "s/md5genome=.*/md5genome=$thismd5genome/" $GENOME.md5.sh
-	}
-	
 	if [[ ! $MAPPED ]]; then
 		declare -a qualdirs
 
@@ -150,8 +143,10 @@ pipeline::_preprocess(){
 			} || return 1
 		}
 	else
-		custom=("${MAPPED[@]}")
-		mapper+=(custom)
+		declare -g -a ${MAPNAME:=custom}
+		declare -n _MAPNAME_muvac=$MAPNAME
+		_MAPNAME_muvac=("${MAPPED[@]}")
+		mapper+=($MAPNAME)
 	fi
 
 	[[ ${#mapper[@]} -eq 0 ]] && return 0
@@ -244,6 +239,20 @@ pipeline::germline() {
 				-c slicesinfo \
 				-x "$REGEX" \
 				-p $TMPDIR \
+				-o $OUTDIR/mapped && \
+			alignment::add4stats -r mapper
+		} || return 1
+	}
+
+	${NOcmo:=false} || {
+		{	pipeline::_slice $($sliced || ${SKIPcmo:=false} || ${NOcmo:=false} && echo true || echo false) && \
+			alignment::clipmateoverlaps \
+				-S ${NOcmo:=true} \
+				-s ${SKIPcmo:=false} \
+				-t $THREADS \
+				-m $MEMORY \
+				-r mapper \
+				-c slicesinfo \
 				-o $OUTDIR/mapped && \
 			alignment::add4stats -r mapper
 		} || return 1
@@ -419,6 +428,20 @@ pipeline::somatic() {
 				-c slicesinfo \
 				-x "$REGEX" \
 				-p $TMPDIR \
+				-o $OUTDIR/mapped && \
+			alignment::add4stats -r mapper
+		} || return 1
+	}
+
+	${NOcmo:=false} || {
+		{	pipeline::_slice $($sliced || ${SKIPcmo:=false} || ${NOcmo:=false} && echo true || echo false) && \
+			alignment::clipmateoverlaps \
+				-S ${NOcmo:=true} \
+				-s ${SKIPcmo:=false} \
+				-t $THREADS \
+				-m $MEMORY \
+				-r mapper \
+				-c slicesinfo \
 				-o $OUTDIR/mapped && \
 			alignment::add4stats -r mapper
 		} || return 1

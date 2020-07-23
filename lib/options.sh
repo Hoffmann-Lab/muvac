@@ -8,13 +8,14 @@ options::usage() {
 		It implements GATK best practices in an optimized, parallelized fashion.
 		
 		VERSION
-		$version
+		$VERSION
+		utilizing bashbone $BASHBONEVERSION
 
 		SYNOPSIS GERMLINE
-		$(basename $0) -1 R1.fq -2 R2.fq -g genome.fa
+		muvac.sh -1 R1.fq -2 R2.fq -g genome.fa
 
 		SYNOPSIS SOMATIC
-		$(basename $0) -n1 normal.fq,normal.fq -t1 tumor1.fq,tumor2.fq -g genome.fa
+		muvac.sh -n1 normal.fq,normal.fq -t1 tumor1.fq,tumor2.fq -g genome.fa
 
 		BASIC OPTIONS
 		-h       | --help                   : prints this message
@@ -30,7 +31,7 @@ options::usage() {
 		-a2      | --adapter2 [string,..]   : adapter sequence(s) - optional. second pair, comma seperated
 		-o       | --out [path]             : output directory - default: $OUTDIR
 		-l       | --log [path]             : output directory - default: $OUTDIR/run.log
-		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/tmp.XXXXXXXXXX.muvac
+		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/muvac.XXXXXXXXXX
 		-t       | --threads [value]        : threads - predicted default: $THREADS
 		-mem     | --memory [value]         : amout of memory for creating bam slices and processing them in parallel instances
 		                                      available: $MAXMEMORY
@@ -40,7 +41,8 @@ options::usage() {
 		GERMLINE OPTIONS
 		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
 		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
-		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)		
+		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)
+		-mn      | --mapper-name [string]   : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
 		-rgn     | --readgroup-name [string]: sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
 		-pon     | --panelofnormals         : disables variant calling and instead prepares a panel of normals for subsequent somatic calls
 		-no-pondb| --no-pondatabase         : disables creation of panel of normals database
@@ -76,6 +78,7 @@ options::usage() {
 		-no-uniq | --no-uniqify             : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                : disables sorting alignments
 		-no-rmd  | --no-removeduplicates    : disables removing duplicates
+		-no-cmo  | --no-clipmateoverlaps    : disables clipping of read mate overlaps
 		-no-adgrp| --no-addreadgroup        : disables proper read group modification by Picard
 		-no-reo  | --no-reordering          : disables reordering according to genome file by Picard
 		-no-laln | --no-leftalign           : disables left alignment by GATK
@@ -135,6 +138,7 @@ options::developer() {
 		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
 		rg    : read group modification
 		rmd   : removing duplicates
+		cmo   : clipping mate overlaps
 		stats : proprocessing and mapping statistics
 		nsplit: splitting split-read alignments
 		reo   : bam reordering according to genome
@@ -172,56 +176,25 @@ options::checkopt (){
 		-tmp | --tmp) arg=true; TMPDIR=$2;;
 		-prevtmp | --previoustmp) arg=true; PREVIOUSTMPDIR=$2;;
 
-		-1   | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 <<< $2; NFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ1[-1]}")";;
-		-2   | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 <<< $2; NFASTQ2[-1]="$(sed -r 's/\s*\n*$//' <<< "${NFASTQ2[-1]}")";;
-		-t1  | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 <<< $2; TFASTQ1[-1]="$(sed -r 's/\s*\n*$//' <<< "${TFASTQ1[-1]}")";;
-		-t2  | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 <<< $2; TFASTQ2[-1]="$(sed -r 's/\s*\n*$//' <<< "${TFASTQ2[-1]}")";;
-		-m   | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED <<< $2; NMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${NMAPPED[-1]}")"; NOqual=true; NOtrim=true; NOcor=true; NOrrm=true; NOsege=true; NOstar=true; NObwa=true;;
-		-tm  | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED <<< $2; TMAPPED[-1]="$(sed -r 's/\s*\n*$//' <<< "${TMAPPED[-1]}")";;
+		-1   | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 < <(printf '%s' "$2");;
+		-2   | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 < <(printf '%s' "$2");;
+		-t1  | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 < <(printf '%s' "$2");;
+		-t2  | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 < <(printf '%s' "$2");;
+		-m   | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED < <(printf '%s' "$2");;
+		-mn  | --mapper-name) arg=true; MAPNAME=$2;;
+		-tm  | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED < <(printf '%s' "$2");;
 		-rx  | --regex) arg=true; REGEX=$2;;
-		-a1  | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 <<< $2; ADAPTER1[-1]="$(sed -r 's/\s*\n*$//' <<< "${ADAPTER1[-1]}")";;
-		-a2  | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 <<< $2; ADAPTER2[-1]="$(sed -r 's/\s*\n*$//' <<< "${ADAPTER2[-1]}")";;
+		-a1  | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 < <(printf '%s' "$2");;
+		-a2  | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 < <(printf '%s' "$2");;
 		-d   | --distance) arg=true; DISTANCE=$2;;
 		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
 		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
 		-pon | --panelofnormals) PON=true;;
 		-mypon | --my-panelofnormals) MYPON=true;;
 
-
-		-resume | --resume-from)
-			arg=true
-			local enable=false
-			# don't Smd5, Sslice !
-			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-				eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
-				$enable || [[ "$2" == "$s" ]] && {
-					enable=true
-					eval "SKIP$s=false"
-				}
-			done
-		;;
-		-skip | --skip)
-			arg=true
-			mapfile -d ',' -t <<< $2
-			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-					[[ "$x" == "$s" ]] && eval "SKIP$s=true"
-				done
-			done
-		;;
-		-redo | --redo)
-			arg=true
-			# don't Smd5, Sslice !
-			for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-				eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
-			done
-			mapfile -d ',' -t <<< $2
-			for x in ${MAPFILE[@]}; do # do not quote!! "MAPFILE[@]" appends newline to last element
-				for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
-					[[ "$x" == "$s" ]] && eval "SKIP$s=false"
-				done
-			done
-		;;
+		-resume | --resume-from) arg=true; options::resume "$2";;
+		-skip | --skip) arg=true; options::skip "$2";;
+		-redo | --redo) arg=true; options::redo "$2";;
 
 		-cor      | --correction) NOcor=false;;
 		-rrm      | --rrnafilter) NOrrm=false;;
@@ -238,6 +211,7 @@ options::checkopt (){
 		-no-uniq  | --no-uniqify) NOuniq=true;;
 		-no-sort  | --no-sort) NOsort=true;;
 		-no-rmd   | --no-removeduplicates) NOrmd=true;;
+		-no-cmo   | --no-clipmateoverlaps) NOcmo=true;;
 		-no-addrg | --no-addreadgroup) NOaddrg=true;;
 		-no-reo   | --no-reordering) NOreo=true;;
 		-no-laln  | --no-leftalign) NOlaln=true;;
@@ -266,4 +240,41 @@ options::checkopt (){
 		[[ $2 ]] && [[ ! "$2" =~ ^- ]] && commander::printerr "illegal argument $2 for option $1" && return 1
 		return 0
 	}
+}
+
+options::resume(){
+	local s enable=false
+	# don't Smd5, Sslice !
+	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
+		$enable || [[ "$1" == "$s" ]] && {
+			enable=true
+			eval "SKIP$s=false"
+		}
+	done
+}
+
+options::skip(){
+	local x s
+	declare -a mapdata
+	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
+	for x in "${mapdata[@]}"; do
+		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
+		done
+	done
+}
+
+options::redo(){
+	local x s
+	declare -a mapdata
+	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
+	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
+	done
+	for x in "${mapdata[@]}"; do
+		for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
+		done
+	done
 }
