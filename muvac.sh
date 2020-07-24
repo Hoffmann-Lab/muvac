@@ -47,7 +47,6 @@ cleanup() {
 INSDIR=$MUVAC
 source $(dirname $(readlink -e $0))/bashbone/activate.sh -i $MUVAC -c true || die
 BASHBONEVERSION=$version
-unset JAVA_HOME #activate.sh loads java 12 into path which lets gatk4 fail with IncompatibleClassChangeError
 for f in $(dirname $(readlink -e $0))/lib/*.sh; do
 	source $f || die "unexpected error in source code - please contact developer"
 done

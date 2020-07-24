@@ -8,10 +8,10 @@ compile::all(){
 	{	compile::bashbone -i "$insdir" -t $threads && \
 		compile::muvac -i "$insdir" -t $threads && \
 		compile::conda -i "$insdir" -t $threads && \
+		compile::trimmomatic -i "$insdir" -t $threads && \
 		compile::sortmerna -i "$insdir" -t $threads && \
 		compile::segemehl -i "$insdir" -t $threads && \
 		compile::knapsack -i "$insdir" -t $threads
-		# compile::annovar -i "$insdir" -t $threads
 	} || return 1
 
 	return 0
@@ -74,16 +74,16 @@ compile::conda() {
 		
 		conda install -n py2 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
 			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
-			perl perl-threaded perl-dbi perl-app-cpanminus perl-list-moreutils perl-try-tiny \
-			numpy scipy pysam cython \
+			perl perl-threaded perl-db-file perl-dbi perl-app-cpanminus perl-list-moreutils perl-try-tiny perl-set-intervaltree perl-uri \
+			numpy scipy pysam cython matplotlib \
 			datamash \
-			fastqc trimmomatic rcorrector \
+			fastqc rcorrector \
 			star bwa hisat2 \
 			samtools picard bamutil bedtools vcflib vt \
 			bcftools gatk4 freebayes varscan platypus-variant vardict vardict-java \
 			snpeff snpsift && \
 		chmod 755 $insdir/conda/envs/py2/bin/run_rcorrector.pl && \
-		conda list -n py2 -f "fastqc|trimmomatic|rcorrector|star|star-fusion|bwa|hisat2|macs2|samtols|picard" | grep -v '^#' > $insdir/condatools.txt && \
+		conda list -n py2 -f "fastqc|rcorrector|star|star-fusion|bwa|hisat2|macs2|samtols|picard" | grep -v '^#' > $insdir/condatools.txt && \
 
 		conda install -n py3 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
 			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
@@ -187,7 +187,7 @@ compile::_setup_snpeff() {
 		head -n 1 data/dbNSFP*_variant.chr1 > data/dbNSFP.txt && \
 		cat dbNSFP*_variant.chr* | grep -v "^#" >> data/dbNSFP.txt && \
 		rm dbNSFP*_variant.chr* && \
-		$MUVAC/bin/samtools/bgzip -f -@ $THREADS < data/dbNSFP.txt > data/dbNSFP.txt.gz && \
+		$MUVAC/bin/samtools/bgzip -f -@ $threads < data/dbNSFP.txt > data/dbNSFP.txt.gz && \
 		$MUVAC/bin/samtools/tabix -f -s 1 -b 2 -e 2 data/dbNSFP.txt.gz && \
 		# url='http://www.genome.gov/admin/gwascatalog.txt'
 		url='ftp://ftp.ebi.ac.uk/pub/databases/gwas/releases/latest/gwas-catalog-associations.tsv' && \
