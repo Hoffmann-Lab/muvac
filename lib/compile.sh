@@ -33,7 +33,7 @@ compile::muvac() {
 		cp -r $src/!(bashbone|setup*) $insdir/muvac-$version && \
 		mkdir -p $insdir/latest && \
 		ln -sfn $insdir/muvac-$version $insdir/latest/muvac && \
-		ln -sfn $insdir/muvac-$bashboneversion $insdir/muvac-$version/bashbone
+		ln -sfn $insdir/bashbone-$bashboneversion $insdir/muvac-$version/bashbone
 	} || return 1
 
 	return 0
