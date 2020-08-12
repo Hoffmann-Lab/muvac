@@ -11,6 +11,7 @@ pipeline::_preprocess(){
 				-s ${SKIPqual:=false} \
 				-t $THREADS \
 				-o $OUTDIR/qualities/raw \
+				-p $TMPDIR \
 				-1 FASTQ1 \
 				-2 FASTQ2
 		} || return 1
@@ -20,7 +21,6 @@ pipeline::_preprocess(){
 					-S ${NOtrim:=false} \
 					-s ${SKIPtrim:=false} \
 					-t $THREADS \
-					-m $MEMORY \
 					-o $OUTDIR/trimmed \
 					-p $TMPDIR \
 					-1 FASTQ1 \
@@ -30,6 +30,7 @@ pipeline::_preprocess(){
 					-s ${SKIPqual:=false} \
 					-t $THREADS \
 					-o $OUTDIR/qualities/trimmed \
+					-p $TMPDIR \
 					-1 FASTQ1 \
 					-2 FASTQ2
 			} || return 1
@@ -51,6 +52,7 @@ pipeline::_preprocess(){
 						-s ${SKIPqual:=false} \
 						-t $THREADS \
 						-o $OUTDIR/qualities/clipped \
+						-p $TMPDIR \
 						-1 FASTQ1 \
 						-2 FASTQ2
 				} || return 1
@@ -71,6 +73,7 @@ pipeline::_preprocess(){
 					-s ${SKIPqual:=false} \
 					-t $THREADS \
 					-o $OUTDIR/qualities/corrected \
+					-p $TMPDIR \
 					-1 FASTQ1 \
 					-2 FASTQ2
 			} || return 1
@@ -82,7 +85,6 @@ pipeline::_preprocess(){
 					-s ${SKIPrrm:=false} \
 					-t $THREADS \
 					-m $MEMORY \
-					-i $INSDIR \
 					-o $OUTDIR/rrnafiltered \
 					-p $TMPDIR \
 					-1 FASTQ1 \
@@ -92,6 +94,7 @@ pipeline::_preprocess(){
 					-s ${SKIPqual:=false} \
 					-t $THREADS \
 					-o $OUTDIR/qualities/rrnafiltered \
+					-p $TMPDIR \
 					-1 FASTQ1 \
 					-2 FASTQ2
 			} || return 1

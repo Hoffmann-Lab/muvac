@@ -1,13 +1,5 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
-trap '
-	cleanup $?
-	sleep 1
-	pids=($(pstree -p $$ | grep -Eo "\([0-9]+\)" | grep -Eo "[0-9]+" | tail -n +2))
-	{ kill -KILL "${pids[@]}" && wait "${pids[@]}"; } &> /dev/null
-	printf "\r"
-' EXIT
-trap 'die "killed by sigint or sigterm"' INT TERM
 
 die() {
 	echo ":ERROR: $*" >&2
@@ -20,10 +12,9 @@ cleanup() {
 		find $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \;
 	}
 	[[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
-		echo ":INFO: removing temporary directory and unnecessary files"
 		[[ -e $TMPDIR ]] && {
 			find $TMPDIR -type f -exec rm -f {} \;
-			find $TMPDIR -type d -depth -exec rm -rf {} \;
+			find $TMPDIR -depth -type d -exec rm -rf {} \;
 			rm -rf $TMPDIR
 		}
 		[[ -e $OUTDIR ]] && {
@@ -43,13 +34,12 @@ cleanup() {
 	}
 }
 
-[[ ! $MUVAC ]] && die "cannot find installation. please run setup and/or do: export MUVAC=/path/to/install/dir"
-INSDIR=$MUVAC
-source $(dirname $(readlink -e $0))/bashbone/activate.sh -i $MUVAC -c true || die
-BASHBONEVERSION=$version
-for f in $(dirname $(readlink -e $0))/lib/*.sh; do
-	source $f || die "unexpected error in source code - please contact developer"
-done
+# defines INSDIR and by sourcing bashbone it defines BASHBONEVERSION variable as well
+source $(dirname $(readlink -e $0))/activate.sh -c true || die
+
+trap 'configure::exit -p $$ -f cleanup $?' EXIT
+trap 'die "killed"' INT TERM
+
 VERSION=$version
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
@@ -112,8 +102,8 @@ else
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
 
-commander::print "muvac $VERSION utilizing bashbone $BASHBONEVERSION started with command: $CMD" > $LOG || die "cannot access $LOG"
-commander::print "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
+commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONEVERSION started with command: $CMD" > $LOG || die "cannot access $LOG"
+commander::printinfo "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
 ${Smd5:=false} || {
@@ -127,12 +117,12 @@ else
 	pipeline::germline 2> >(tee -ai $LOG >&2) >> $LOG || die
 fi
 ${Smd5:=false} || {
-	commander::print "finally updating genome and annotation md5 sums" >> $LOG
+	commander::printinfo "finally updating genome and annotation md5 sums" >> $LOG
 	thismd5genome=$(md5sum $GENOME | cut -d ' ' -f 1)
 	[[ "$md5genome" != "$thismd5genome" ]] && sed -i "s/md5genome=.*/md5genome=$thismd5genome/" $GENOME.md5.sh
 	thismd5gtf=$(md5sum $GTF | cut -d ' ' -f 1)
 	[[ "$md5gtf" != "$thismd5gtf" ]] && sed -i "s/md5gtf=.*/md5gtf=$thismd5gtf/" $GENOME.md5.sh
 }
 
-commander::print "success" >> $LOG
+commander::printinfo "success" >> $LOG
 exit 0

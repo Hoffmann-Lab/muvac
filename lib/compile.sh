@@ -27,7 +27,7 @@ compile::muvac() {
 	source $src/lib/version.sh
 	shopt -s extglob
 
-	commander::print "installing muvac"
+	commander::printinfo "installing muvac"
 	{	rm -rf $insdir/muvac-$version && \
 		mkdir -p $insdir/muvac-$version && \
 		cp -r $src/!(bashbone|setup*) $insdir/muvac-$version && \
@@ -54,7 +54,7 @@ compile::conda() {
 	local insdir threads
 	compile::_parse -r insdir -s threads "$@"
 
-	commander::print "installing conda and tools"
+	commander::printinfo "installing conda and tools"
 	{	url='https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh' && \
 		wget -q -O $insdir/miniconda.sh $url && \
 		version=$(bash $insdir/miniconda.sh -h | grep -F Installs | cut -d ' ' -f 3) && \
@@ -103,96 +103,3 @@ compile::conda() {
 	return 0
 }
 
-compile::annovar() {
-	local insdir threads
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	commander::print "installing annovar"
-	{	url="http://www.openbioinformatics.org/annovar/download/0wgxR2rIVP/annovar.latest.tar.gz" && \
-		wget -q $url -O $insdir/annovar.tar.gz && \
-		tar -xzf $insdir/annovar.tar.gz -C $insdir && \
-		rm $insdir/annovar.tar.gz && \
-		cd $insdir/annovar && \
-		url='http://www.openbioinformatics.org/annovar/download/table_annovar.pl' && \
-		wget -q $url -O table_annovar.pl && \
-		chmod 755 table_annovar.pl && \
-		mkdir -p $insdir/latest && \
-		ln -sfn $PWD/bin $insdir/latest/annovar
-	} || return 1
-
-	return 0
-}
-
-compile::_setup_annovar() {
-	local insdir threads
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	commander::print "configuring annovar databases"
-	{	source $insdir/conda/bin/activate py2 && \
-		cd -P $insdir/latest/annovar && \
-		#refSeq
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar refGene humandb/ && \
-		# ./annotate_variation.pl -buildver hg19 -downdb ensGene humandb/ #UCSC - needs seq to get mRNA
-		# ./annotate_variation.pl -buildver hg19 -downdb knownGene humandb/ #UCSC - needs seq to get mRNA
-		# ./annotate_variation.pl -buildver hg19 -downdb seq humandb/hg19_seq
-		# ./retrieve_seq_from_fasta.pl humandb/hg19_ensGene.txt -seqdir humandb/hg19_seq -format ensGene -outfile humandb/hg19_ensGeneMrna.fa
-		# ./retrieve_seq_from_fasta.pl humandb/hg19_knownGene.txt -seqdir humandb/hg19_seq -format knownGene -outfile humandb/hg19_knownGeneMrna.fa
-		url='http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/ensemblToGeneName.txt.gz' && \
-		wget -q $url -O humandb/ensemblToGeneName.txt.gz && \
-		gzip -d humandb/ensemblToGeneName.txt.gz  && \
-		# ./annotate_variation.pl -buildver hg19 -downdb cytoBand humandb/
-		# ./annotate_variation.pl -buildver hg19 -downdb genomicSuperDups humandb/ 
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar esp6500siv2_all humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar 1000g2015aug humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar exac03 humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar avsnp147 humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar dbnsfp33a humandb/ && \
-		# ./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar snp142 humandb
-		./annotate_variation.pl -buildver hg19 -downdb tfbsConsSites humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb targetScanS humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb wgRna humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb gwasCatalog humandb/ && \
-		./annotate_variation.pl -buildver hg19 -downdb -webfrom annovar clinvar_20170130 humandb/
-	} || return 1
-
-	return 0
-}
-
-compile::_setup_snpeff() {
-	local insdir threads
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	commander::print "configuring snpeff databases"
-	{	source $insdir/conda/bin/activate py2 && \
-		java -jar snpEff.jar download -v GRCh37.75 && \
-		#java -jar snpEff.jar download -v hg19 #hg19: UCSC, hg19kg: UCSC knownGenes, GRCh37.75: Ensembl 
-		url='http://ftp.ebi.ac.uk/pub/databases/ensembl/encode/integration_data_jan2011/byDataType/openchrom/jan2011/promoter_predictions/master_known.bed' && \
-		wget -q $url -O data/promoter.bed && \
-		url='http://ftp.ebi.ac.uk/pub/databases/ensembl/encode/integration_data_jan2011/byDataType/openchrom/jan2011/mirna_tss/miRNA_promoters_hg19_edited_data.bed' && \
-		wget -q $url -O data/miRNApromoter.bed && \
-		url='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz' && \
-		wget -q $url -O data/clinvar.vcf.gz && \
-		url='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz.tbi' && \
-		wget -q $url -O data/clinvar.vcf.gz.tbi && \
-		url='ftp://ftp.broadinstitute.org/pub/ExAC_release/release1/ExAC.r1.sites.vep.vcf.gz' && \
-		wget -q $url -O data/exac.vcf.gz && \
-		url='ftp://ftp.broadinstitute.org/pub/ExAC_release/release1/ExAC.r1.sites.vep.vcf.gz.tbi' && \
-		wget -q $url -O data/exac.vcf.gz.tbi && \
-		# url='https://drive.google.com/open?id=0B60wROKy6OqceTNZRkZnaERWREk'
-		#(see https://sites.google.com/site/jpopgen/dbNSFP)
-		url='ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.3.zip' && \
-		wget -q $url -O data/dbnsfp.zip && \
-		unzip -q -o -d data dbnsfp.zip && \
-		rm data/dbnsfp.zip && \
-		head -n 1 data/dbNSFP*_variant.chr1 > data/dbNSFP.txt && \
-		cat dbNSFP*_variant.chr* | grep -v "^#" >> data/dbNSFP.txt && \
-		rm dbNSFP*_variant.chr* && \
-		$MUVAC/bin/samtools/bgzip -f -@ $threads < data/dbNSFP.txt > data/dbNSFP.txt.gz && \
-		$MUVAC/bin/samtools/tabix -f -s 1 -b 2 -e 2 data/dbNSFP.txt.gz && \
-		# url='http://www.genome.gov/admin/gwascatalog.txt'
-		url='ftp://ftp.ebi.ac.uk/pub/databases/gwas/releases/latest/gwas-catalog-associations.tsv' && \
-		wget -q $url -O data/gwas.txt
-	} || return 1
-
-	return 0
-}

@@ -2,6 +2,8 @@
 **MUVAC** is an ultra fast germline and somatic variant caller pipeline for model and non-model organisms.
 It implements **GATK best practices** and beyond in an optimized, parallelized fashion.
 
+MUVAC leverages on bashbone, but comes with its own more lightweight installer
+
 MUVAC can be applied on 
 - RAW FASTQ (Exome-Seq/WG-Seq/RNA-Seq) data 
 - BAM alignment files of different preprocessing states
