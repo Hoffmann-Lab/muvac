@@ -1,6 +1,36 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 
+pipeline::index(){
+	{	unset NA1 NA2 && \
+		alignment::segemehl \
+			-S ${NOsege:=false} \
+			-s true \
+			-t $THREADS \
+			-g $GENOME \
+			-x $GENOME.segemehl.idx \
+			-o $TMPDIR \
+			-r NA1 \
+			-1 NA2 && \
+		unset NA1 NA2 && \
+		alignment::star \
+			-S ${NOstar:=false} \
+			-s true \
+			-t $THREADS \
+			-g $GENOME \
+			-x $GENOME-staridx \
+			-o $TMPDIR \
+			-r NA1 \
+			-1 NA2 && \
+		genome::mkdict \
+			-t $THREADS \
+			-i $GENOME \
+			-p $TMPDIR
+	} || return 1
+
+	return 0
+}
+
 pipeline::_preprocess(){
 	if [[ ! $MAPPED ]]; then
 		declare -a qualdirs
@@ -497,9 +527,10 @@ pipeline::somatic() {
 			-o $OUTDIR/mapped
 	} || return 1
 
-	if [[ $DBSNP ]]; then
-		callvariants::vcfzip -t $THREADS -i $DBSNP || return 1
-	fi
+
+	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
+		callvariants::vcfzip -t $THREADS -z DBSNP || return 1
+	}
 
 	{	pipeline::_slice $($sliced || ${SKIPbqsr:=false} || ${NObqsr:=false} && echo true || echo false) && \
 		alignment::bqsr \

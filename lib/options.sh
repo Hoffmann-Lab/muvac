@@ -11,6 +11,9 @@ options::usage() {
 		$VERSION
 		utilizing bashbone $BASHBONEVERSION
 
+		SYNOPSIS INDEXING
+		muvac.sh -x -g genome.fa -gtf genome.gtf
+
 		SYNOPSIS GERMLINE
 		muvac.sh -1 R1.fq -2 R2.fq -g genome.fa
 
@@ -25,7 +28,9 @@ options::usage() {
 		                                      0 - get simple status updates
 		                                      1 - get status updates and commands
 		                                      2 - get full output
+		-x       | --index                  : create all requiered genome indices if necessary and exit
 		-g       | --genome [path]          : genome fasta input, without only preprocessing is performed
+		-gtf     | --gtf [path]               : annotation gtf input - optional, default: genome.fasta.gtf
 		-s       | --snp [path]             : genome dbSNP input - optional, default: [-g].vcf
 		-a1      | --adapter1 [string,..]   : adapter sequence(s) - optional. single or first pair, comma seperated
 		-a2      | --adapter2 [string,..]   : adapter sequence(s) - optional. second pair, comma seperated
@@ -38,7 +43,7 @@ options::usage() {
 		                                      default: 30000 (allows for $MTHREADS instances)
 		                                      NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
 
-		GERMLINE OPTIONS
+		GERMLINE/PON OPTIONS
 		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
 		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
 		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)
@@ -132,7 +137,6 @@ options::developer() {
 		rrm   : rRNA filtering
 		sege  : Segemehl mapping
 		star  : STAR mapping
-		bwa   : BWA mapping
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
 		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
@@ -196,6 +200,8 @@ options::checkopt (){
 		-skip | --skip) arg=true; options::skip "$2";;
 		-redo | --redo) arg=true; options::redo "$2";;
 
+		-x  | --index) INDEX=true;;
+
 		-cor      | --correction) NOcor=false;;
 		-rrm      | --rrnafilter) NOrrm=false;;
 		-split    | --split) NOsplitreads=false; NOnsplit=false;;
@@ -207,7 +213,6 @@ options::checkopt (){
 
 		-no-sege  | --no-segemehl) NOsege=true;;
 		-no-star  | --no-star) NOstar=true;;
-		-no-bwa   | --no-bwa) NObwa=true;;
 		-no-uniq  | --no-uniqify) NOuniq=true;;
 		-no-sort  | --no-sort) NOsort=true;;
 		-no-rmd   | --no-removeduplicates) NOrmd=true;;
@@ -245,7 +250,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -259,7 +264,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in md5 qual trim clip cor rrm sege star uniq sort slice rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -269,11 +274,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done

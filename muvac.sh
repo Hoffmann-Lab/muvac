@@ -70,7 +70,15 @@ fi
 [[ ! $LOG ]] && LOG=$OUTDIR/run.log
 [[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
 [[ $MTHREADS -eq 0 ]] && die "too less memory available ($MAXMEMORY)"
-[[ ! $NFASTQ1 ]] && [[ ! $TFASTQ1 ]] && [[ ! $NMAPPED ]] && [[ ! $TMAPPED ]] && die "fastq or sam/bam file input missing - call "$(basename $0)" -h for help"
+${INDEX:=false} || {
+	[[ ! $NFASTQ1 ]] && [[ ! $TFASTQ1 ]] && [[ ! $NMAPPED ]] && [[ ! $TMAPPED ]] && die "fastq or sam/bam file input missing"
+}
+[[ ! $NFASTQ2 ]] && {
+	[[ "$NOcmo" == "false" ]] && {
+		commander::warn "no second mate fastq file given - proceeding without mate overlap clipping"
+		NOcmo=true
+	}
+}
 if [[ $GENOME ]]; then
 	readlink -e $GENOME | file -f - | grep -qF ASCII || die "genome file does not exists or is compressed $GENOME"
 else
@@ -78,7 +86,16 @@ else
 	SKIPmd5=true
 	NOsege=true
 	NOstar=true
-	NObwa=true
+fi
+if [[ $GTF ]]; then
+	readlink -e $GTF | file -f - | grep -qF ASCII || die "annotation file does not exists or is compressed $GTF"
+else
+	readlink -e $GENOME.gtf | file -f - | grep -qF ASCII && {
+		GTF=$GENOME.gtf
+	} || {
+		${INDEX:=false} && die "annotation file missing"
+		commander::warn "proceeding without gtf file"
+	}
 fi
 if [[ $DBSNP ]]; then
 	readlink -e $DBSNP | file -f - || die "dbSNP file does not exists $DBSNP"
