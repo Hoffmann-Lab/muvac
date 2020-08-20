@@ -98,7 +98,7 @@ else
 	}
 fi
 if [[ $DBSNP ]]; then
-	readlink -e $DBSNP | file -f - || die "dbSNP file does not exists $DBSNP"
+	readlink -e $DBSNP &> /dev/null || die "dbSNP file does not exists $DBSNP"
 else
 	[[ $TFASTQ1 ]] && commander::warn "proceeding without dbSNP file"
 fi

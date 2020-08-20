@@ -83,7 +83,8 @@ compile::conda() {
 			bcftools gatk4 freebayes varscan platypus-variant vardict vardict-java \
 			snpeff snpsift && \
 		chmod 755 $insdir/conda/envs/py2/bin/run_rcorrector.pl && \
-		conda list -n py2 -f "fastqc|rcorrector|star|star-fusion|bwa|hisat2|macs2|samtols|picard" | grep -v '^#' > $insdir/condatools.txt && \
+		conda list -n py2 -f "fastqc|rcorrector|star|bwa|hisat2|samtools|picard|bamutil|bedtools" | grep -v '^#' > $insdir/condatools.txt && \
+		conda list -n py2 -f "bcftools|gatk4|freebayes|varscan|platypus-variant|vardict|vardict-java|vcflib|vt|snpeff|snpsift" | grep -v '^#' >> $insdir/condatools.txt && \
 
 		conda install -n py3 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
 			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
@@ -95,7 +96,6 @@ compile::conda() {
 			r-devtools bioconductor-biocinstaller bioconductor-biocparallel \
 			bioconductor-genomicfeatures bioconductor-genefilter \
 			r-dplyr r-ggplot2 r-gplots r-rcolorbrewer r-svglite r-pheatmap r-ggpubr r-treemap r-rngtools && \
-		conda list -n py2r -f "r-treemap" | grep -v '^#' >> $insdir/condatools.txt && \
 
 		conda clean -y -a
 	} || return 1
