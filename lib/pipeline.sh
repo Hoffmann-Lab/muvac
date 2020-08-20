@@ -90,7 +90,7 @@ pipeline::_preprocess(){
 		fi
 
 		{	preprocess::rcorrector \
-				-S ${NOcor:=false} \
+				-S ${NOcor:=true} \
 				-s ${SKIPcor:=false} \
 				-t $THREADS \
 				-o $OUTDIR/corrected \
@@ -102,7 +102,7 @@ pipeline::_preprocess(){
 		${NOrrm:=true} || {
 			{	qualdirs+=("$OUTDIR/qualities/rrnafiltered") && \
 				preprocess::sortmerna \
-					-S ${NOrrm:=false} \
+					-S ${NOrrm:=true} \
 					-s ${SKIPrrm:=false} \
 					-t $THREADS \
 					-m $MEMORY \
@@ -209,7 +209,8 @@ pipeline::_slice(){
 		-r mapper \
 		-c slicesinfo \
 		-p $TMPDIR || return 1
-	SLICED=true
+	! $1 && ! $2 && SLICED=true # 
+	! $1 && ${SKIPslice:-false} && SLICED=true
 
 	return 0
 }
@@ -256,7 +257,7 @@ pipeline::germline() {
 		
 		pipeline::_slice ${NOcmo:=false} ${SKIPcmo:=false} && \
 		alignment::clipmateoverlaps \
-			-S ${NOcmo:=true} \
+			-S ${NOcmo:=false} \
 			-s ${SKIPcmo:=false} \
 			-t $THREADS \
 			-m $MEMORY \
@@ -270,21 +271,25 @@ pipeline::germline() {
 			-s ${SKIPstats:=false} \
 			-r mapper \
 			-t $THREADS \
-			-o $OUTDIR/stats && \
+			-o $OUTDIR/stats
+	} || return 1 
 
-		pipeline::_slice ${NOsplitreads:=true} ${SKIPnsplit:=false} && \
-		alignment::splitncigar \
-			-S ${NOnsplit:=false} \
-			-s ${SKIPnsplit:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-g $GENOME \
-			-r mapper \
-			-c slicesinfo \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
+	${NOsplitreads:=true} || {
+		{	pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false} && \
+			alignment::splitncigar \
+				-S ${NOnsplit:=false} \
+				-s ${SKIPnsplit:=false} \
+				-t $THREADS \
+				-m $MEMORY \
+				-g $GENOME \
+				-r mapper \
+				-c slicesinfo \
+				-p $TMPDIR \
+				-o $OUTDIR/mapped
+		} || return 1
+	}
 
-		pipeline::_slice ${NOreo:=false} ${SKIPreo:=false} && \
+	{	pipeline::_slice ${NOreo:=false} ${SKIPreo:=false} && \
 		alignment::reorder \
 			-S ${NOreo:=false} \
 			-s ${SKIPreo:=false} \
@@ -435,14 +440,14 @@ pipeline::somatic() {
 
 		pipeline::_slice ${NOcmo:=false} ${SKIPcmo:=false} && \
 		alignment::clipmateoverlaps \
-			-S ${NOcmo:=true} \
+			-S ${NOcmo:=false} \
 			-s ${SKIPcmo:=false} \
 			-t $THREADS \
 			-m $MEMORY \
 			-r mapper \
 			-c slicesinfo \
 			-o $OUTDIR/mapped && \
-		${NOcmo:=true} || alignment::add4stats -r mapper && \
+		${NOcmo:=false} || alignment::add4stats -r mapper && \
 
 		alignment::bamstats \
 			-S ${NOstats:=false} \
