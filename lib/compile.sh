@@ -51,7 +51,7 @@ compile::upgrade(){
 }
 
 compile::conda() {
-	local insdir threads
+	local insdir threads url version
 	compile::_parse -r insdir -s threads "$@"
 
 	commander::printinfo "installing conda and tools"

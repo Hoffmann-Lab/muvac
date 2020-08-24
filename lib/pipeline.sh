@@ -209,7 +209,7 @@ pipeline::_slice(){
 		-r mapper \
 		-c slicesinfo \
 		-p $TMPDIR || return 1
-	! $1 && ! $2 && SLICED=true # 
+	! $1 && ! $2 && SLICED=true
 	! $1 && ${SKIPslice:-false} && SLICED=true
 
 	return 0
