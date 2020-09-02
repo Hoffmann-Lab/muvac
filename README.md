@@ -1,7 +1,7 @@
 # MUVAC
 ---
 
-MUVAC implements multiple variant calling options from Exome-Seq/WG-Seq or RNA-Seq data. It offers free GATK best-prectices in an optimized, parallelized fashion.
+MUVAC implements multiple variant calling options from Exome-Seq/WG-Seq or RNA-Seq data. It offers free GATK best-practices in an optimized, parallelized fashion.
 
 MUVAC leverages on bashbone, which is a bash library for workflow and pipeline design within but not restricted to the scope of Next Generation Sequencing (NGS) data analyses. MUVAC makes use of bashbones best-practice parameterized and run-time tweaked software wrappers and compiles them into a multi-threaded pipeline for analyses of model AND non-model organisms. 
 
