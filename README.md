@@ -54,7 +54,7 @@ muvac.sh -h
 ---
 
 ```bash
-setup -i all -d <path/to/installation>
+setup.sh -i all -d <path/to/installation>
 source <path/of/installation/activate.sh>
 muvac.sh -h
 ```
@@ -62,7 +62,7 @@ muvac.sh -h
 ## Update to a newer release
 
 ```bash
-setup -i upgrade -d <path/of/installation>
+setup.sh -i upgrade -d <path/of/installation>
 source <path/of/installation/activate.sh>
 bashbone -h
 ```

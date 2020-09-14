@@ -18,7 +18,18 @@ pipeline::index(){
 			-s true \
 			-t $THREADS \
 			-g $GENOME \
-			-x $GENOME-staridx \
+			-x $GENOME.star.idx \
+			-o $TMPDIR \
+			-p $TMPDIR \
+			-r NA1 \
+			-1 NA2 && \
+		unset NA1 NA2 && \
+		alignment::bwa \
+			-S ${NObwa:=false} \
+			-s true \
+			-t $THREADS \
+			-g $GENOME \
+			-x $GENOME.bwa.idx/bwa \
 			-o $TMPDIR \
 			-r NA1 \
 			-1 NA2 && \
@@ -27,6 +38,21 @@ pipeline::index(){
 			-i $GENOME \
 			-p $TMPDIR
 	} || return 1
+
+	return 0
+}
+
+pipeline::_slice(){
+	alignment::slice \
+		-S ${SLICED:-$1} \
+		-s ${SKIPslice:-$2} \
+		-t $THREADS \
+		-m $MEMORY \
+		-r mapper \
+		-c slicesinfo \
+		-p $TMPDIR || return 1
+	! $1 && ! $2 && SLICED=true
+	! $1 && ${SKIPslice:-false} && SLICED=true
 
 	return 0
 }
@@ -45,7 +71,8 @@ pipeline::_preprocess(){
 				-1 FASTQ1 \
 				-2 FASTQ2
 		} || return 1
-		${NOtrim:=false} || { 
+
+		${NOtrim:=false} || {
 			{	qualdirs+=("$OUTDIR/qualities/trimmed") && \
 				preprocess::trimmomatic \
 					-S ${NOtrim:=false} \
@@ -65,23 +92,44 @@ pipeline::_preprocess(){
 					-2 FASTQ2
 			} || return 1
 		}
+
+		${NOclip:=false} || {
+			{	qualdirs+=("$OUTDIR/qualities/polyntclipped") && \
+				preprocess::rmpolynt \
+					-S ${NOclip:=false} \
+					-s ${SKIPclip:=false} \
+					-t $THREADS \
+					-o $OUTDIR/polyntclipped \
+					-1 FASTQ1 \
+					-2 FASTQ2 && \
+				preprocess::fastqc \
+					-S ${NOqual:=false} \
+					-s ${SKIPqual:=false} \
+					-t $THREADS \
+					-o $OUTDIR/qualities/polyntclipped \
+					-p $TMPDIR \
+					-1 FASTQ1 \
+					-2 FASTQ2
+			} || return 1
+		}
+
 		if [[ $ADAPTER1 ]]; then
 			${NOclip:=false} || {
-				{	qualdirs+=("$OUTDIR/qualities/clipped") && \
+				{	qualdirs+=("$OUTDIR/qualities/adapterclipped") && \
 					preprocess::cutadapt \
 						-S ${NOclip:=false} \
 						-s ${SKIPclip:=false} \
 						-a ADAPTER1 \
 						-A ADAPTER2 \
 						-t $THREADS \
-						-o $OUTDIR/clipped \
+						-o $OUTDIR/adapterclipped \
 						-1 FASTQ1 \
 						-2 FASTQ2 && \
 					preprocess::fastqc \
 						-S ${NOqual:=false} \
 						-s ${SKIPqual:=false} \
 						-t $THREADS \
-						-o $OUTDIR/qualities/clipped \
+						-o $OUTDIR/qualities/adapterclipped \
 						-p $TMPDIR \
 						-1 FASTQ1 \
 						-2 FASTQ2
@@ -120,7 +168,7 @@ pipeline::_preprocess(){
 					-2 FASTQ2
 			} || return 1
 		}
-		
+
 		{	preprocess::qcstats \
 				-S ${NOstats:=false} \
 				-s ${SKIPstats:=false} \
@@ -130,42 +178,61 @@ pipeline::_preprocess(){
 				-1 FASTQ1 \
 				-2 FASTQ2
 		} || return 1
+	fi
 
-		${NOsege:=false} || {
-			{	alignment::segemehl \
-					-S ${NOsege:=false} \
-					-s ${SKIPsege:=false} \
-					-5 ${SKIPmd5:=false} \
-					-1 FASTQ1 \
-					-2 FASTQ2 \
-					-o $OUTDIR/mapped \
-					-t $THREADS \
-					-a $((100-DISTANCE)) \
-					-i ${INSERTSIZE:=200000} \
-					-p ${NOsplitreads:=true} \
-					-g $GENOME \
-					-x $GENOME.segemehl.idx \
-					-r mapper
-			} || return 1
-		}
-		${NOstar:=false} || {
-			{	alignment::star \
-					-S ${NOstar:=false} \
-					-s ${SKIPstar:=false} \
-					-5 ${SKIPmd5:=false} \
-					-1 FASTQ1 \
-					-2 FASTQ2 \
-					-o $OUTDIR/mapped \
-					-t $THREADS \
-					-a $((100-DISTANCE)) \
-					-i ${INSERTSIZE:=200000} \
-					-p ${NOsplitreads:=true} \
-					-g $GENOME \
-					-f "$GTF" \
-					-x $GENOME-staridx \
-					-r mapper
-			} || return 1
-		}
+	return 0
+}
+
+
+pipeline::mapping(){
+	if [[ ! $MAPPED ]]; then
+
+		{	alignment::segemehl \
+				-S ${NOsege:=false} \
+				-s ${SKIPsege:=false} \
+				-5 ${SKIPmd5:=false} \
+				-1 FASTQ1 \
+				-2 FASTQ2 \
+				-o $OUTDIR/mapped \
+				-t $THREADS \
+				-a $((100-DISTANCE)) \
+				-i ${INSERTSIZE:=200000} \
+				-n ${NOsplitreads:=true} \
+				-g $GENOME \
+				-x $GENOME.segemehl.idx \
+				-r mapper && \
+
+			alignment::star \
+				-S ${NOstar:=false} \
+				-s ${SKIPstar:=false} \
+				-5 ${SKIPmd5:=false} \
+				-1 FASTQ1 \
+				-2 FASTQ2 \
+				-o $OUTDIR/mapped \
+				-p $TMPDIR \
+				-t $THREADS \
+				-a $((100-DISTANCE)) \
+				-i ${INSERTSIZE:=200000} \
+				-n ${NOsplitreads:=true} \
+				-g $GENOME \
+				-f "$GTF" \
+				-x $GENOME.star.idx \
+				-r mapper && \
+
+			! ${NOsplitreads:=true} || alignment::bwa \
+				-S ${NObwa:=false} \
+				-s ${SKIPbwa:=false} \
+				-5 ${SKIPmd5:=false} \
+				-1 FASTQ1 \
+				-2 FASTQ2 \
+				-o $OUTDIR/mapped \
+				-t $THREADS \
+				-a $((100-DISTANCE)) \
+				-f true \
+				-g $GENOME \
+				-x $GENOME.bwa.idx/bwa \
+				-r mapper
+		} || return 1
 	else
 		declare -g -a ${MAPNAME:=custom}
 		declare -n _MAPNAME_muvac=$MAPNAME
@@ -173,10 +240,8 @@ pipeline::_preprocess(){
 		mapper+=($MAPNAME)
 	fi
 
-	[[ ${#mapper[@]} -eq 0 ]] && return 0
-
-	
 	{	alignment::add4stats -r mapper && \
+
 		alignment::postprocess \
 			-S ${NOuniq:=false} \
 			-s ${SKIPuniq:=false} \
@@ -200,26 +265,12 @@ pipeline::_preprocess(){
 	return 0
 }
 
-pipeline::_slice(){
-	alignment::slice \
-		-S ${SLICED:-$1} \
-		-s ${SKIPslice:-$2} \
-		-t $THREADS \
-		-m $MEMORY \
-		-r mapper \
-		-c slicesinfo \
-		-p $TMPDIR || return 1
-	! $1 && ! $2 && SLICED=true
-	! $1 && ${SKIPslice:-false} && SLICED=true
-
-	return 0
-}
-
 pipeline::germline() {
 	declare -a mapper
 	declare -A slicesinfo
 
 	pipeline::_preprocess || return 1
+	pipeline::_mapping || return 1
 	[[ ${#mapper[@]} -eq 0 ]] && return 0
 
 	{	genome::mkdict \
@@ -254,7 +305,7 @@ pipeline::germline() {
 			-p $TMPDIR \
 			-o $OUTDIR/mapped && \
 		${NOrmd:=false} || alignment::add4stats -r mapper && \
-		
+
 		pipeline::_slice ${NOcmo:=false} ${SKIPcmo:=false} && \
 		alignment::clipmateoverlaps \
 			-S ${NOcmo:=false} \
@@ -265,14 +316,14 @@ pipeline::germline() {
 			-c slicesinfo \
 			-o $OUTDIR/mapped && \
 		${NOcmo:=false} || alignment::add4stats -r mapper && \
-	
+
 		alignment::bamstats \
 			-S ${NOstats:=false} \
 			-s ${SKIPstats:=false} \
 			-r mapper \
 			-t $THREADS \
 			-o $OUTDIR/stats
-	} || return 1 
+	} || return 1
 
 	${NOsplitreads:=true} || {
 		{	pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false} && \
@@ -315,7 +366,7 @@ pipeline::germline() {
 	} || return 1
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		callvariants::vcfzip -t $THREADS -z DBSNP || return 1
+		variants::vcfzip -t $THREADS -z DBSNP || return 1
 	}
 
 	{	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false} && \
@@ -343,7 +394,7 @@ pipeline::germline() {
 
 	if [[ $PON ]]; then
 		{	pipeline::_slice ${NOpon:=false} ${NOpon:=false} && \
-			callvariants::panelofnormals \
+			variants::panelofnormals \
 				-S ${NOpon:=false} \
 				-s ${SKIPpon:=false} \
 				-t $THREADS \
@@ -354,7 +405,7 @@ pipeline::germline() {
 				-p $TMPDIR \
 				-o $OUTDIR/variants && \
 
-			callvariants::makepondb \
+			variants::makepondb \
 				-S ${NOpondb:=false} \
 				-s ${SKIPpondb:=false} \
 				-t $THREADS \
@@ -367,7 +418,7 @@ pipeline::germline() {
 	fi
 
 	{	pipeline::_slice ${NOhc:=false} ${SKIPhc:=false} && \
-		callvariants::haplotypecaller \
+		variants::haplotypecaller \
 			-S ${NOhc:=false} \
 			-s ${SKIPhc:=false} \
 			-t $THREADS \
@@ -381,20 +432,6 @@ pipeline::germline() {
 	} || return 1
 
 	return 0
-
-	{	variants::haplotypecaller && \
-		variants::mutect && \
-		variants::samtools && \
-		variants::varscan && \
-		variants::lofreq && \
-		variants::platypus && \
-		variants::vardict && \
-		variants::freebayes && \
-		variants::condensevcf && \
-		variants::mergevcf
-	} || return 1
-
-	return 0
 }
 
 pipeline::somatic() {
@@ -402,6 +439,7 @@ pipeline::somatic() {
 	declare -A slicesinfo
 
 	pipeline::_preprocess || return 1
+	pipeline::_mapping || return 1
 	[[ ${#mapper[@]} -eq 0 ]] && return 0
 
 	{	genome::mkdict \
@@ -496,7 +534,7 @@ pipeline::somatic() {
 
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		callvariants::vcfzip -t $THREADS -z DBSNP || return 1
+		variants::vcfzip -t $THREADS -z DBSNP || return 1
 	}
 
 	{	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false} && \
@@ -522,7 +560,7 @@ pipeline::somatic() {
 			-r mapper && \
 
 		pipeline::_slice ${NOmu:=false} ${SKIPmu:=false} && \
-		callvariants::mutect \
+		variants::mutect \
 			-S ${NOmu:=false} \
 			-s ${SKIPmu:=false} \
 			-t $THREADS \

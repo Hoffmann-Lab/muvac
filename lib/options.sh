@@ -6,7 +6,7 @@ options::usage() {
 		DESCRIPTION
 		MUVAC is an ultra fast germline and somatic variant calling pipeline for model and non-model organisms.
 		It implements GATK best practices in an optimized, parallelized fashion.
-		
+
 		VERSION
 		$VERSION
 		utilizing bashbone $BASHBONEVERSION
@@ -21,75 +21,87 @@ options::usage() {
 		muvac.sh -n1 normal.fq,normal.fq -t1 tumor1.fq,tumor2.fq -g genome.fa
 
 		BASIC OPTIONS
-		-h       | --help                   : prints this message
-		-dev     | --devel                  : prints extended pipeline options
-		-r       | --remove                 : clean up after successful termination
-		-v       | --verbosity [value]      : set level of verbosity - default: 0
-		                                      0 - get simple status updates
-		                                      1 - get status updates and commands
-		                                      2 - get full output
-		-x       | --index                  : create all requiered genome indices if necessary and exit
-		-g       | --genome [path]          : genome fasta input, without only preprocessing is performed
-		-gtf     | --gtf [path]               : annotation gtf input - optional, default: genome.fasta.gtf
-		-s       | --snp [path]             : genome dbSNP input - optional, default: [-g].vcf
-		-a1      | --adapter1 [string,..]   : adapter sequence(s) - optional. single or first pair, comma seperated
-		-a2      | --adapter2 [string,..]   : adapter sequence(s) - optional. second pair, comma seperated
-		-o       | --out [path]             : output directory - default: $OUTDIR
-		-l       | --log [path]             : output directory - default: $OUTDIR/run.log
-		-tmp     | --tmp                    : temporary directory - default: $TMPDIR/muvac.XXXXXXXXXX
-		-t       | --threads [value]        : threads - predicted default: $THREADS
-		-mem     | --memory [value]         : amout of memory for creating bam slices and processing them in parallel instances
-		                                      available: $MAXMEMORY
-		                                      default: 30000 (allows for $MTHREADS instances)
-		                                      NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
+		-h       | --help                     : prints this message
+		-v       | --verbosity [value]        : set level of verbosity. default: 0
+		                                        0 - get simple status updates
+		                                        1 - get status updates and commands
+		                                        2 - get full output
+		-o       | --out [path]               : output directory. default: $OUTDIR
+		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
+		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/rippchen.XXXXXXXXXX
+		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
+		-t       | --threads [value]          : number of threads. default: $THREADS
+		-mem     | --memory [value]           : amout of memory for creating bam slices and processing them in parallel instances
+		                                        available: $MAXMEMORY
+		                                        default: 30000 (allows for $MTHREADS instances)
+		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
 
-		GERMLINE/PON OPTIONS
-		-1       | --fq1 [path,..]          : fastq input - single or first pair, comma seperated
-		-2       | --fq2 [path,..]          : fastq input - optional. second pair, comma seperated
-		-m       | --mapped [path,..]       : SAM/BAM input - comma seperated (replaces -1 and -2)
-		-mn      | --mapper-name [string]   : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
-		-rgn     | --readgroup-name [string]: sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
-		-pon     | --panelofnormals         : disables variant calling and instead prepares a panel of normals for subsequent somatic calls
-		-no-pondb| --no-pondatabase         : disables creation of panel of normals database
+		ADVANCED OPTIONS
+		-dev     | --devel                    : prints list of keywords in processing order for advanced pipeline control
+		-resume  | --resume-from [string]     : resume from a specific pipeline step (see -dev)
+		-skip    | --skip [string,..]         : skip specific pipeline step(s). comma seperated (see -dev)
+		-redo    | --redo [string,..]         : just rerun specific pipeline step(s). comma seperated (see -dev)
 
-		SOMATIC OPTIONS
-		-n1      | --normalfq1 [path,..]    : normal fastq input - single or first pair, comma seperated
-		-n2      | --normalfq2 [path,..]    : normal fastq input - optional. second pair, comma seperated
-		-t1      | --tumorfq1 [path,..]     : tumor fastq input - single or first pair, comma seperated
-		-t2      | --tumorfq2 [path,..]     : tumor fastq input - optional. second pair, comma seperated
-		-nm      | --normalmapped [path,..] : normal SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
-		-tm      | --tumormapped [path,..]  : tumor SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
-		-mypon   | --my-panelofnormals      : priorize own panel of normals database over [-g].pon.vcf.gz
+		GENOME OPTIONS
+		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed (see dlgenome.sh)
+		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf (see dlgenome.sh)
+		-s       | --snp [path]               : genome dbSNP input - optional, default: [-g].vcf (see dlgenome.sh)
+		-no-dbsnp| --no-dbsnp                 : disbale dbSNP usage for BQSRecalibration and variant calling
+		-x       | --index                    : create all requiered genome indices and md5 sums and exit. otherwise create necessary indices on the fly
+		-no-sege | --no-segemehl              : disables indexing for segemehl when used with -x
+		-no-star | --no-star                  : disables indexing for STAR when used with -x. use when indexing is applied on plug-n-play CTAT resource
+		                                        NOTE: md5sum of [-g].star.idx/SA file needs to be manually added to [-g].md5.sh file
+		-no-bwa  | --no-bwa                   : disables indexing for BWA when used with -x
 
-		GENERAL OPTIONS
-		-rx      | --regex                  : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
-		                                      NOTE: necessary for sucessful deduplication, if unavailable set to 'null'
-		-resume  | --resume-from [value]    : resume from a specific pipeline step - see -dev|--devel
-		-skip    | --skip [value,..]        : skip specific pipeline step(s) - see -dev|--devel, comma seperated
-		-redo    | --redo [value,..]        : just rerun specific pipeline step(s) - see -dev|--devel, comma seperated
-		-no-qual | --no-qualityanalysis     : disables quality analysis
-		-no-clip | --no-clipping            : disables removal of adapter sequences if -a|--adapter is used
-		-no-trim | --no-trimming            : disables quality trimming
-		-cor     | --correction             : enable majority based raw read error correction
-		-rrm     | --rrnafilter             : enable rRNA filter
-		-no-stats| --no-statistics          : disables fastq preprocessing and mapping statistics
+		PREPROCESSING OPTIONS
+		-no-qual | --no-qualityanalysis       : disables read quality analysis
+		-no-trim | --no-trimming              : disables quality trimming
+		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
+		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first pair. comma seperated (e.g. Illumina universal adapter AGATCGGAAGAGC)
+		-a2      | --adapter2 [string,..]     : adapter sequence(s). second pair. comma seperated (can be the same as -a1. no revere complement required)
+		-cor     | --correction               : enable majority based raw read error correction
+		-rrm     | --rrnafilter               : enable rRNA filter
 
 		ALIGNMENT OPTIONS
-		-split   | --split                  : enable split read mapping e.g. to call variants from RNA-Seq data
-		-d       | --distance               : maximum read alignment edit distance in % - default: 5
-		-i       | --insertsize             : maximum allowed insert for aligning mate pairs - default: 200000
-		-no-sege | --no-segemehl            : disables mapping by segemehl
-		-no-star | --no-star                : disables mapping by STAR
-		-no-uniq | --no-uniqify             : disables extraction of properly paired and uniquely mapped reads
-		-no-sort | --no-sort                : disables sorting alignments
-		-no-rmd  | --no-removeduplicates    : disables removing duplicates
-		-no-cmo  | --no-clipmateoverlaps    : disables clipping of read mate overlaps
-		-no-adgrp| --no-addreadgroup        : disables proper read group modification by Picard
-		-no-reo  | --no-reordering          : disables reordering according to genome file by Picard
-		-no-laln | --no-leftalign           : disables left alignment by GATK
-		-no-realn| --no-realign             : disables indel realignment by GATK
-		-no-bqsr | --no-qualrecalibration   : disables any base quality score recalibration (BQSR)
-		-no-dbsnp| --no-dbsnp               : disbale dbSNP usage for BQSRecalibration and variant calling
+		-d       | --distance                 : maximum read alignment edit distance in % - default: 5
+		-i       | --insertsize               : maximum allowed insert for aligning mate pairs - default: 200000
+		-split   | --split                    : enable split read mapping e.g. to call variants from RNA-Seq data
+		-no-sege | --no-segemehl              : disables mapping by segemehl
+		-no-star | --no-star                  : disables mapping by STAR
+		-no-bwa  | --no-bwa                   : disables mapping by BWA
+		-no-uniq | --no-uniqify               : disables extraction of properly paired and uniquely mapped reads
+		-no-sort | --no-sort                  : disables sorting alignments
+		-no-rmd  | --no-removeduplicates      : disables removing duplicates
+		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
+		                                        NOTE: necessary for sucessful deduplication, if unavailable set to 'null'
+		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
+		-no-adgrp| --no-addreadgroup          : disables proper read group modification by Picard
+		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
+		-no-laln | --no-leftalign             : disables left alignment by GATK
+		-no-realn| --no-realign               : disables indel realignment by GATK
+		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
+		-no-sege | --no-segemehl              : disables mapping by segemehl
+		-no-star | --no-star                  : disables mapping by STAR
+		-no-bwa  | --no-bwa                   : disables mapping by BWA, when -no-split is used. default: no BWA mapping
+		-no-stats| --no-statistics            : disables preprocessing statistics
+
+		GERMLINE/PON OPTIONS
+		-1       | --fq1 [path,..]            : fastq input - single or first pair, comma seperated
+		-2       | --fq2 [path,..]            : fastq input - optional. second pair, comma seperated
+		-m       | --mapped [path,..]         : SAM/BAM input - comma seperated (replaces -1 and -2)
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
+		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
+		-pon     | --panelofnormals           : disables variant calling and instead prepares a panel of normals for subsequent somatic calls
+		-no-pondb| --no-pondatabase           : disables creation of panel of normals database
+
+		SOMATIC OPTIONS
+		-n1      | --normalfq1 [path,..]      : normal fastq input - single or first pair, comma seperated
+		-n2      | --normalfq2 [path,..]      : normal fastq input - optional. second pair, comma seperated
+		-t1      | --tumorfq1 [path,..]       : tumor fastq input - single or first pair, comma seperated
+		-t2      | --tumorfq2 [path,..]       : tumor fastq input - optional. second pair, comma seperated
+		-nm      | --normalmapped [path,..]   : normal SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
+		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
+		-mypon   | --my-panelofnormals        : priorize own panel of normals database over [-g].pon.vcf.gz
 
 		REFERENCES
 		(c) Konstantin Riege
@@ -98,7 +110,6 @@ options::usage() {
 		ADDITIONAL INFORMATION
 		Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY
 		This requierement needs to be fulfilled in all additional VCF files, too - see below.
-		HG19, HG38 or MM10 genome and dbSNP can be retrieved using the script: $MUVAC/latest/bashbone/dlgenome.sh
 
 		To obtain panel of normals, common somatic variants and population variants with allele frequencies visit
 		HG38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
@@ -110,18 +121,10 @@ options::usage() {
 
 		Analogously, obtain a dbSNP file, extract and re-name it: genome.fa.vcf
 		HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
-		HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/	
+		HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/
 	EOF
 	exit 0
 }
-# 		VARIANT CALLER OPTIONS
-# 		-no-hc   | --no-haplotypecaller     : disables variant caller GATK HaplotypeCaller
-# 		-no-mu   | --no-mutect              : disables variant caller GATK MuTect2
-# 		-no-fb   | --no-freebayes           : disables variant caller Freebayes
-# 		-no-bt   | --no-bcftools            : disables variant caller Bcftools
-# 		-no-pp   | --no-platypus            : disables variant caller Platypus
-# 		-no-vs   | --no-varscan             : disables variant caller VarScan
-# 		-no-vd   | --no-vardict             : disables variant caller VarDict
 
 options::developer() {
 	cat <<- EOF
@@ -205,14 +208,15 @@ options::checkopt (){
 		-cor      | --correction) NOcor=false;;
 		-rrm      | --rrnafilter) NOrrm=false;;
 		-split    | --split) NOsplitreads=false; NOnsplit=false;;
-		
+
 		-no-qual  | --no-qualityanalysis) NOqual=true;;
 		-no-clip  | --no-clipping) NOclip=true;;
-		-no-trim  | --no-trimming) NOtrim=true;;				
+		-no-trim  | --no-trimming) NOtrim=true;;
 		-no-stats | --no-statistics) NOstats=true;;
 
 		-no-sege  | --no-segemehl) NOsege=true;;
 		-no-star  | --no-star) NOstar=true;;
+		-no-bwa   | --no-bwa) NObwa=true;;
 		-no-uniq  | --no-uniqify) NOuniq=true;;
 		-no-sort  | --no-sort) NOsort=true;;
 		-no-rmd   | --no-removeduplicates) NOrmd=true;;
@@ -233,7 +237,7 @@ options::checkopt (){
 		-no-vs    | --no-varscan) NOvs=true;;
 		-no-vd    | --no-vardict) NOvd=true;;
 
-		-*) commander::printerr "illegal option $1"; return 1;; 
+		-*) commander::printerr "illegal option $1"; return 1;;
 		*) commander::printerr "illegal option $2"; return 1;;
 	esac
 
@@ -250,7 +254,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -264,7 +268,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 qual trim clip cor rrm sege star uniq sort slice rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -274,11 +278,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in qual trim clip cor rrm sege star uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in qual trim clip cor rrm sege star bwa uniq sort rg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done

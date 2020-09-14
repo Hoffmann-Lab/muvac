@@ -46,16 +46,22 @@ THREADS=$(grep -cF processor /proc/cpuinfo)
 MAXMEMORY=$(grep -F -i memavailable /proc/meminfo | awk '{printf("%d",$2*0.9/1024)}')
 MEMORY=30000
 [[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
+[[ $MTHREADS -eq 0 ]] && die "too less memory available ($MAXMEMORY)"
 VERBOSITY=0
 OUTDIR=$PWD/results
 TMPDIR=$OUTDIR
 REGEX='\S+:(\d+):(\d+):(\d+)\s*.*'
 DISTANCE=5
 
+
 options::parse "$@" || die "parameterization issue"
 
 mkdir -p $OUTDIR || die "cannot access $OUTDIR"
 OUTDIR=$(readlink -e $OUTDIR)
+[[ ! $LOG ]] && LOG=$OUTDIR/run.log
+mkdir -p $(dirname $LOG) || die "cannot access $LOG"
+printf '' > $LOG || die "cannot access $LOG"
+
 if [[ $PREVIOUSTMPDIR ]]; then
 	TMPDIR=$PREVIOUSTMPDIR
 	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
@@ -67,41 +73,46 @@ else
 	TMPDIR=$(mktemp -d -p $TMPDIR muvac.XXXXXXXXXX) || die "cannot access $TMPDIR"
 fi
 
-[[ ! $LOG ]] && LOG=$OUTDIR/run.log
-[[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
-[[ $MTHREADS -eq 0 ]] && die "too less memory available ($MAXMEMORY)"
 ${INDEX:=false} || {
 	[[ ! $NFASTQ1 ]] && [[ ! $TFASTQ1 ]] && [[ ! $NMAPPED ]] && [[ ! $TMAPPED ]] && die "fastq or sam/bam file input missing"
 }
+
 [[ ! $NFASTQ2 ]] && {
 	[[ "$NOcmo" == "false" ]] && {
 		commander::warn "no second mate fastq file given - proceeding without mate overlap clipping"
 		NOcmo=true
 	}
 }
-if [[ $GENOME ]]; then
+
+[[ $GENOME ]] && {
 	readlink -e $GENOME | file -f - | grep -qF ASCII || die "genome file does not exists or is compressed $GENOME"
-else
+	[[ ! -s $GENOME.md5.sh ]] && cp $(dirname $(readlink -e $0))/bashbone/lib/md5.sh $GENOME.md5.sh
+	source $GENOME.md5.sh
+} || {
+	${INDEX:=false} && die "genome file missing"
 	commander::warn "proceeding without genome file"
 	SKIPmd5=true
 	NOsege=true
 	NOstar=true
-fi
-if [[ $GTF ]]; then
+}
+
+[[ $GTF ]] && {
 	readlink -e $GTF | file -f - | grep -qF ASCII || die "annotation file does not exists or is compressed $GTF"
-else
+} || {
 	readlink -e $GENOME.gtf | file -f - | grep -qF ASCII && {
 		GTF=$GENOME.gtf
 	} || {
 		${INDEX:=false} && die "annotation file missing"
 		commander::warn "proceeding without gtf file"
 	}
-fi
-if [[ $DBSNP ]]; then
+}
+
+[[ $DBSNP ]] && {
 	readlink -e $DBSNP &> /dev/null || die "dbSNP file does not exists $DBSNP"
-else
+} || {
 	[[ $TFASTQ1 ]] && commander::warn "proceeding without dbSNP file"
-fi
+}
+
 
 declare -a FASTQ1 FASTQ2 MAPPED NIDX TIDX
 helper::addmemberfunctions -v FASTQ1 -v FASTQ2 -v MAPPED -v NIDX -v TIDX
@@ -123,16 +134,15 @@ commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONEVERSION started
 commander::printinfo "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
 progress::log -v $VERBOSITY -o $LOG
 
-${Smd5:=false} || {
-	[[ ! -s $GENOME.md5.sh ]] && cp $(dirname $(readlink -e $0))/bashbone/lib/md5.sh $GENOME.md5.sh
-	source $GENOME.md5.sh
-}
 [[ ! $FASTQ2 ]] && NOcmo=true
 if [[ $TFASTQ1 ]]; then
-	pipeline::somatic 2> >(tee -ai $LOG >&2) >> $LOG || die
+	pipeline::somatic 2> >(tee -ai $LOG >&2) >> $LOG
+	[[ $? -gt 0 ]] && die
 else
-	pipeline::germline 2> >(tee -ai $LOG >&2) >> $LOG || die
+	pipeline::germline 2> >(tee -ai $LOG >&2) >> $LOG
+	[[ $? -gt 0 ]] && die
 fi
+
 ${Smd5:=false} || {
 	commander::printinfo "finally updating genome and annotation md5 sums" >> $LOG
 	thismd5genome=$(md5sum $GENOME | cut -d ' ' -f 1)

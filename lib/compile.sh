@@ -3,103 +3,117 @@
 
 compile::all(){
 	local insdir threads
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	{	compile::bashbone -i "$insdir" -t $threads && \
-		compile::muvac -i "$insdir" -t $threads && \
-		compile::conda -i "$insdir" -t $threads && \
-		compile::trimmomatic -i "$insdir" -t $threads && \
-		compile::sortmerna -i "$insdir" -t $threads && \
-		compile::segemehl -i "$insdir" -t $threads && \
-		compile::knapsack -i "$insdir" -t $threads
-	} || return 1
-
-	return 0
+	(	trap 'exit $?' ERR INT TERM
+		set -e
+		compile::_parse -r insdir -s threads "$@"
+		compile::bashbone -i "$insdir" -t $threads
+		compile::muvac -i "$insdir" -t $threads
+		compile::conda -i "$insdir" -t $threads
+		compile::conda_tools -i "$insdir" -t $threads
+		compile::java -i "$insdir" -t $threads
+		compile::trimmomatic -i "$insdir" -t $threads
+		compile::sortmerna -i "$insdir" -t $threads
+		compile::segemehl -i "$insdir" -t $threads
+	)
+	return $?
 }
 
 compile::muvac() {
-	local insdir threads src=$(dirname $(dirname $(readlink -e ${BASH_SOURCE[0]})))
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	local version bashboneversion
-	source $src/bashbone/lib/version.sh
-	bashboneversion=$version
-	source $src/lib/version.sh
-	shopt -s extglob
-
-	commander::printinfo "installing muvac"
-	{	rm -rf $insdir/muvac-$version && \
-		mkdir -p $insdir/muvac-$version && \
-		cp -r $src/!(bashbone|setup*) $insdir/muvac-$version && \
-		mkdir -p $insdir/latest && \
-		ln -sfn $insdir/muvac-$version $insdir/latest/muvac && \
+	local insdir threads version bashboneversion src=$(dirname $(dirname $(readlink -e ${BASH_SOURCE[0]})))
+	(	trap 'exit $?' ERR INT TERM
+		set -e
+		commander::printinfo "installing muvac"
+		compile::_parse -r insdir -s threads "$@"
+		source $src/bashbone/lib/version.sh
+		bashboneversion=$version
+		source $src/lib/version.sh
+		shopt -s extglob
+		rm -rf $insdir/muvac-$version
+		mkdir -p $insdir/muvac-$version
+		cp -r $src/!(bashbone|setup*) $insdir/muvac-$version
+		mkdir -p $insdir/latest
+		ln -sfn $insdir/muvac-$version $insdir/latest/muvac
 		ln -sfn $insdir/bashbone-$bashboneversion $insdir/muvac-$version/bashbone
-	} || return 1
-
-	return 0
+	)
+	return $?
 }
 
 compile::upgrade(){
 	local insdir threads
-	compile::_parse -r insdir -s threads "$@" || return 1
-
-	{	compile::bashbone -i "$insdir" -t $threads && \
+	(	trap 'exit $?' ERR INT TERM
+		set -e
+		compile::_parse -r insdir -s threads "$@"
+		compile::bashbone -i "$insdir" -t $threads
 		compile::muvac -i "$insdir" -t $threads
-	} || return 1
-
-	return 0
+		compile::conda_tools -i "$insdir" -t $threads -u true
+	)
+	return $?
 }
 
-compile::conda() {
-	local insdir threads url version
-	compile::_parse -r insdir -s threads "$@"
+compile::conda_tools() {
+	local insdir threads upgrade=false url version tool n bin
+	declare -A envs
+	(	trap 'exit $?' ERR INT TERM
+		set -e
 
-	commander::printinfo "installing conda and tools"
-	{	url='https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh' && \
-		wget -q -O $insdir/miniconda.sh $url && \
-		version=$(bash $insdir/miniconda.sh -h | grep -F Installs | cut -d ' ' -f 3) && \
-		rm -rf $insdir/conda && \
-		mkdir -p $insdir/conda && \
-		bash $insdir/miniconda.sh -b -f -p $insdir/conda && \
-		rm $insdir/miniconda.sh && \
-		source $insdir/conda/bin/activate && \
+		compile::_parse -r insdir -s threads -c upgrade "$@"
+		source "$insdir/conda/bin/activate" base # base necessary, otherwise fails due to $@ which contains -i and -t
+		while read -r tool; do
+			envs[$tool]=true
+		done < <(conda info -e | awk -v prefix="^"$insdir '$NF ~ prefix {print $1}')
 
-		conda env remove -y -n py2 && \
-		conda env remove -y -n py3 && \
-		conda create -y -n py2 python=2 && \
-		conda create -y -n py2r python=2 && \
-		conda create -y -n py3 python=3 && \
-		
-		# macs2, tophat2/hisat2 and R stuff needs python2 whereas cutadapt,idr,rseqc need python3 env
-		
-		conda install -n py2 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
-			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
-			perl perl-threaded perl-db-file perl-dbi perl-app-cpanminus perl-list-moreutils perl-try-tiny perl-set-intervaltree perl-uri \
-			numpy scipy pysam cython matplotlib \
-			datamash \
-			fastqc rcorrector \
-			star bwa hisat2 \
-			samtools picard bamutil bedtools vcflib vt \
-			bcftools gatk4 freebayes varscan platypus-variant vardict vardict-java \
-			snpeff snpsift && \
-		chmod 755 $insdir/conda/envs/py2/bin/run_rcorrector.pl && \
-		conda list -n py2 -f "fastqc|rcorrector|star|bwa|hisat2|samtools|picard|bamutil|bedtools" | grep -v '^#' > $insdir/condatools.txt && \
-		conda list -n py2 -f "bcftools|gatk4|freebayes|varscan|platypus-variant|vardict|vardict-java|vcflib|vt|snpeff|snpsift" | grep -v '^#' >> $insdir/condatools.txt && \
+		# python 3 envs
+		for tool in fastqc cutadapt rcorrector star bwa picard bamutil gatk4 freebayes varscan; do
+			n=${tool//[^[:alpha:]]/}
+			$upgrade && ${envs[$n]:=false} && continue
 
-		conda install -n py3 -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
-			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
-			cutadapt rseqc && \
-		conda list -n py3 -f "cutadapt|rseqc" | grep -v '^#' >> $insdir/condatools.txt && \
+			commander::printinfo "setup conda $tool env"
+			conda create -y -n $n python=3
+			conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
+			# link commonly used base binaries into env
+			for bin in perl samtools bedtools; do
+				[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+			done
+		done
+		chmod 755 "$insdir/conda/envs/rcorrector/bin/run_rcorrector.pl" # necessary fix
 
-		conda install -n py2r -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda \
-			gcc_linux-64 readline make automake xz zlib bzip2 pigz pbzip2 ncurses htslib ghostscript \
-			r-devtools bioconductor-biocinstaller bioconductor-biocparallel \
-			bioconductor-genomicfeatures bioconductor-genefilter \
-			r-dplyr r-ggplot2 r-gplots r-rcolorbrewer r-svglite r-pheatmap r-ggpubr r-treemap r-rngtools && \
+		tool=vardict
+		n=${tool//[^[:alpha:]]/}
+		$upgrade && ${envs[$n]:=false} || {
+			commander::printinfo "setup conda $tool env"
+			conda create -y -n $n python=3
+			conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool vardict-java
+			for bin in perl samtools bedtools; do
+				[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+			done
+		}
 
+		tool=snpeff
+		n=${tool//[^[:alpha:]]/}
+		$upgrade && ${envs[$n]:=false} || {
+			commander::printinfo "setup conda $tool env"
+			conda create -y -n $n python=3
+			conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool snpsift
+			for bin in perl samtools bedtools; do
+				[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+			done
+		}
+
+		# python 2 envs
+		tool=platypus-variant
+		n=platypus
+		$upgrade && ${envs[$n]:=false} || {
+			commander::printinfo "setup conda $tool env"
+			conda create -y -n $n python=2
+			conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
+			for bin in perl samtools bedtools; do
+				[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+			done
+		}
+
+		commander::printinfo "conda clean up"
 		conda clean -y -a
-	} || return 1
-
-	return 0
+		conda deactivate
+	)
+	return $?
 }
-
