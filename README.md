@@ -1,9 +1,9 @@
-# MUVAC
----
+# Muvac
 
-MUVAC implements multiple variant calling options from Exome-Seq/WG-Seq or RNA-Seq data. It offers free GATK best-practices in an optimized, parallelized fashion.
 
-MUVAC leverages on bashbone, which is a bash library for workflow and pipeline design within but not restricted to the scope of Next Generation Sequencing (NGS) data analyses. MUVAC makes use of bashbones best-practice parameterized and run-time tweaked software wrappers and compiles them into a multi-threaded pipeline for analyses of model AND non-model organisms. 
+Muvac implements multiple variant calling options from Exome-Seq/WG-Seq or RNA-Seq data. It offers free GATK best-practices in an optimized, parallelized fashion.
+
+Muvac leverages on bashbone, which is a bash library for workflow and pipeline design within but not restricted to the scope of Next Generation Sequencing (NGS) data analyses. muvac makes use of bashbones best-practice parameterized and run-time tweaked software wrappers and compiles them into a multi-threaded pipeline for analyses of model AND non-model organisms.
 
 ## Features
 
@@ -24,7 +24,6 @@ MUVAC leverages on bashbone, which is a bash library for workflow and pipeline d
 - Germline and somatic variant detection from DNA or RNA sequencing experiments plus VCF normalization
 
 # License
----
 
 The whole project is licensed under the GPL v3 (see LICENSE file for details). <br>
 **except** the the third-party tools set-upped during installation. Please refer to the corresponding licenses
@@ -32,7 +31,6 @@ The whole project is licensed under the GPL v3 (see LICENSE file for details). <
 Copyleft (C) 2020, Konstantin Riege
 
 # Download
----
 
 ```bash
 git clone --recursive https://github.com/koriege/muvac.git
@@ -42,7 +40,7 @@ git checkout $(git describe --tags)
 # Quick start (without installation)
 Please see installation section to get all third-party tools set-upped and subsequently all functions to work properly.
 
-Load the library and list available functions. Each function comes with a usage. Or check out the MUVAC usage.
+Load the library and list available functions. Each function comes with a usage. Or check out the Rippchen usage.
 
 ```bash
 source activate.sh
@@ -51,31 +49,71 @@ muvac.sh -h
 ```
 
 # Installation
----
+
+## Full installation from scratch
 
 ```bash
-setup.sh -i all -d <path/to/installation>
-source <path/of/installation/activate.sh>
+setup -i all -d <path/to/installation>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -h
 ```
 
-## Update to a newer release
+## In case bashbone was previously installed
+```bash
+setup.sh -i muvac -d <path/to/bashbone/installation>
+source <path/of/bashbone/installation/latest/muvac/activate.sh>
+muvac.sh -h
+```
+
+### Upgrade to a newer release (sources only)
 
 ```bash
 setup.sh -i upgrade -d <path/of/installation>
-source <path/of/installation/activate.sh>
-bashbone -h
+source <path/of/installation/latest/muvac/activate.sh>
+muvac.sh -h
+```
+
+### Update tools
+
+The setup routine will always install the latest software via conda, which can be updated by running the related setup functions again.
+
+```bash
+setup -i conda_tools -d <path/of/installation>
+```
+
+Trimmomatic, segemehl, STAR-Fusion and GEM will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
+
+```bash
+setup -i trimmomatic,segemehl,starfusion,gem -d <path/of/installation>
 ```
 
 # Usage
----
+
+To load muvac, bashbone respectively, execute
+```bash
+source <path/of/installation/latest/muvac/activate.sh>
+bashbone -h
+```
+
+In order to get all function work properly, enable muvac via bashbone to use conda environments. Conda can be disabled analogously.
+```bash
+bashbone -c
+bashbone -s
+```
+
+Shortcut:
+
+```bash
+source <path/of/installation/latest/muvac/activate.sh> -c true
+bashbone -s
+```
 
 ## Retrieve SRA datasets
 
 Use the enclosed script to fetch sequencing data from SRA
 
 ```bash
-source <path/of/installation/activate.sh> -c true
+source <path/of/installation/latest/muvac/activate.sh> -c true
 sra-dump.sh -h
 ```
 
@@ -83,16 +121,23 @@ sra-dump.sh -h
 
 Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY. This requirement needs to be fulfilled in all associated VCF files, too. To obtain properly configured genomes and dbSNP files, see blow.
 
-### Retrieve genomes
+## Retrieve genomes
 
-Use the enclosed script to fetch human hg19/hg38 or mouse mm9/mm10 genomes, annotations and dbSNP.
+Use the enclosed script to fetch human hg19/hg38 or mouse mm9/mm10 genomes and annotations. Plug-n-play CTAT genome resource made for gene fusion detection and shipped with STAR index can be selected optionally.
 
 ```bash
-source <path/of/installation/activate.sh> -c true
+source <path/of/installation/latest/muvac/activate.sh> -c true
 dlgenome.sh -h
 ```
 
-### Retrieve GATK resources
+## Index genomes
+
+```bash
+source <path/of/installation/latest/muvac/activate.sh>
+muvac.sh -x -g <path/to/genome.fa> -gtf <path/to/genome.gtf>
+```
+
+## Retrieve GATK resources
 
 To obtain panel of normals, common somatic variants and population variants with allele frequencies visit
 
@@ -108,18 +153,18 @@ Afterwards, place the files next to your genome fasta file with equal name plus 
 Analogously, place a custom dbSNP file next to the genome as genome.fa.vcf. Possible resources are
 
 - HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
-- HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/	
+- HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/
 
 ## Examples
 
-This section showcases some usages without explaining each parameter in a broader detail. Check out the MUVAC help page for more configuration options. Most of them will be opt-out settings.
+This section showcases some usages without explaining each parameter in a broader detail. Check out the muvac help page for more configuration options. Most of them will be opt-out settings.
 
 ### Data pre-processing and mapping
 
 Data pre-processing without mapping by segemehl or STAR and without SortMeRNA for artificial rRNA depletion.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq> [-2 <fastq>] -no-rrm -no-sege -no-star
 ```
@@ -127,7 +172,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Data pre-processing, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing, removal of duplicons, clipping of overlapping mate pairs).
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq> [-2 <fastq>]
 ```
@@ -135,7 +180,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). More sequences can be found via Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document&filter=manuals&p=1>), the resource of Trimmomatic (<https://github.com/timflutre/trimmomatic/tree/master/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration/contaminant_list.txt>).
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq> [-2 <fastq>] -a1 AGATCGGAAGAG [-a2 AGATCGGAAGAG]
 ```
@@ -143,7 +188,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Data pre-processing, mapping by segemehl and STAR and disabled post-processing (i.e. unique read extraction, sorting, indexing, removal of duplicons, clipping of overlapping mate pairs).
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq> [-2 <fastq>] -no-uniq -no-sort -no-idx -no-rmd -no-cmo
 ```
@@ -151,7 +196,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Multiple inputs can be submitted as comma separated list.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq,fastq,...> [-2 <fastq,fastq,...>]
 ```
@@ -159,7 +204,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Tweak the amount of allowed mismatches in % during mapping
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq> [-2 <fastq>] -d 10
 ```
@@ -169,15 +214,15 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Perform pre-processing, mapping and post-processing with subsequent germline variant calling.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq,fastq,...> [-2 <fastq,fastq,...>]
 ```
 
-Perform pre-processing, mapping and post-processing with subsequent somatic variant calling with known sites and a panel of normals provided by GATK resources (stored as genome.fa.pon.tar.gz, see additional information section of MUVAC usage).
+Perform pre-processing, mapping and post-processing with subsequent somatic variant calling with known sites and a panel of normals provided by GATK resources (stored as genome.fa.pon.tar.gz, see additional information section of muvac usage).
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -n1 <fastq,fastq,...> [-n2 <fastq,fastq,...>] -t1 <fastq,fastq,...> [-t2 <fastq,fastq,...>]
 ```
@@ -185,7 +230,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 Perform generation of a custom panel of normals for subsequent somatic variant calling.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
 -1 <fastq,fastq,...> [-2 <fastq,fastq,...>] -pon
 
@@ -198,33 +243,32 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 List all possible break points and keywords to control Rippchen.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -dev
 ```
 
 Use comma separated lists to e.g. skip md5 check and quality analysis.
 
 ```bash
-source <path/of/installation/activate.sh>
-muvac.sh [...] -skip md5,qual 
+source <path/of/installation/latest/muvac/activate.sh>
+muvac.sh [...] -skip md5,qual
 ```
 
 Example how to resume from the segemehl mapping break point after previous data pre-processing.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh [...] -resume sege
 ```
 
 Single tasks can be re-computed with the `redo` parameter and a comma separated list of arguments.
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh [...] -redo bqsr,idx,hc
 ```
 
 # Third-party software
----
 
 ## In production
 
@@ -233,6 +277,7 @@ muvac.sh [...] -redo bqsr,idx,hc
 | BamUtil       | <https://genome.sph.umich.edu/wiki/BamUtil>                         | 10.1101/gr.176552.114 |
 | BCFtools      | <http://www.htslib.org/doc/bcftools.html>                           | 10.1093/bioinformatics/btr509 |
 | BEDTools      | <https://bedtools.readthedocs.io>                                   | 10.1093/bioinformatics/btq033 |
+| BWA           | <https://github.com/lh3/bwa>                                        | 10.1093/bioinformatics/btp324 |
 | Cutadapt      | <https://cutadapt.readthedocs.io/en/stable>                         | 10.14806/ej.17.1.200 |
 | fastqc        | <https://www.bioinformatics.babraham.ac.uk/projects/fastqc>         | NA |
 | GATK          | <https://github.com/broadinstitute/gatk>                            | 10.1101/gr.107524.110 <br> 10.1038/ng.806 |
@@ -250,34 +295,38 @@ muvac.sh [...] -redo bqsr,idx,hc
 
 | Tool | Source | DOI |
 | ---  | ---    | --- |
-| BWA             | <https://github.com/lh3/bwa>                               | 10.1093/bioinformatics/btp324 |
 | freebayes       | <https://github.com/ekg/freebayes>                         | arXiv:1207.3907 |
 | Platypus        | <https://rahmanteamdevelopment.github.io/Platypus>         | 10.1038/ng.3036 |
 | SnpEff          | <https://pcingola.github.io/SnpEff>                        | 10.4161/fly.19695 |
-| STAR-Fusion     | <https://github.com/STAR-Fusion/STAR-Fusion/wiki>          | 10.1101/120295 |
 | VarDict         | <https://github.com/AstraZeneca-NGS/VarDict>               | 10.1093/nar/gkw227 |
 | VarScan         | <http://dkoboldt.github.io/varscan>                        | 10.1101/gr.129684.111 |
 
 # Supplementary information
 
-MUVAC can be executed in parallel instances and thus is able to be submitted as a job into a queuing system like a Sun Grid Engine (SGE). This could be easily done by amending the following code snipped.
+Muvac can be executed in parallel instances and thus is able to be submitted as a job into a queuing system like a Sun Grid Engine (SGE). This could be easily done by using scripts written via here-documents or via the bashbone builtin `commander::qsubcmd`. The latter makes use of array jobs, which enables to wait for completion of all jobs, handle single exit codes and amend used resources via `qalter -tc <instances> <jobname>`.
 
 ```bash
+source <path/of/installation/latest/muvac/activate.sh>
+declare -a cmds=()
 for i in *R1.fastq.gz; do
 	j=${i/R1/R2}
 	sh=job_$(basename $i .R1.fastq.gz)
-	cat <<- EOF > $sh.sh
-		#!/usr/bin/env bash
-		source <path/of/installation/activate.sh>
-		muvac.sh -v 2 -t <threads> -g <fasta> -o <outdir> -l <logfile> -tmp <tmpdir> -1 $i -2 $j
-	EOF
-	echo "rm -f $sh.+(log|err) && qsub -pe <env> <threads> -l 'h=<hostname>|<hostname>' -S /bin/bash -e $sh.err -o $sh.log -V -cwd $sh.sh"
+	commander::makecmd -a cmd1 -c {COMMANDER[0]}<<- CMD
+		source <path/of/installation/latest/muvac/activate.sh>;
+		muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> -1 $i -2 $j
+	CMD
 done
+commander::qsubcmd -r -l h="<hostname>|<hostname>" -p <env> -t <threads> -i <instances> -n <jobname> -o <logdir> -a cmds
+# analogously: echo job.\$SGE_TASK_ID.sh | qsub -sync n -pe <env> <threads> -t 1-<#jobs> -tc <instances> -l h="<hostname>|<hostname>" -S /bin/bash -N <jobname> -o <logfile> -j y -V -cwd
 ```
 
 In some cases a glibc pthreads bug (<https://sourceware.org/bugzilla/show_bug.cgi?id=23275>) may cause pigz failures (`internal threads error`) and premature termination of toola leveraging on it e.g. Cutadapt. One can circumvent this by upgrading the operating system or making use of an alternative pthreads library and `LD_PRELOAD`
 
 ```bash
-source <path/of/installation/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh>
 LD_PRELOAD=/lib64/noelision/libpthread.so.0 muvac.sh [...]
 ```
+
+# Closing remarks
+
+Bashbone is a continuously developed library and actively used in my daily work. As a single developer it may take me a while to fix errors and issues. Feature requests cannot be handled so far, but I am happy to receive pull request.

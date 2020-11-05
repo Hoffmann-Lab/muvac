@@ -2,14 +2,14 @@
 # (c) Konstantin Riege
 
 options::usage() {
-	cat <<- EOF
+	commander::print {COMMANDER[0]}<<- EOF
 		DESCRIPTION
 		MUVAC is an ultra fast germline and somatic variant calling pipeline for model and non-model organisms.
 		It implements GATK best practices in an optimized, parallelized fashion.
 
 		VERSION
 		$VERSION
-		utilizing bashbone $BASHBONEVERSION
+		utilizing bashbone $BASHBONE_VERSION
 
 		SYNOPSIS INDEXING
 		muvac.sh -x -g genome.fa -gtf genome.gtf
@@ -123,7 +123,7 @@ options::usage() {
 		HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
 		HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/
 	EOF
-	exit 0
+	exit 1
 }
 
 options::developer() {
@@ -168,7 +168,7 @@ options::developer() {
 options::checkopt (){
 	local arg=false
 	case $1 in
-		-h   | --help) options::usage;;
+		-h   | --help) (options::usage); exit 0;;
 		-dev | --devel) options::developer;;
 
 		-r   | --remove) CLEANUP=true;;
