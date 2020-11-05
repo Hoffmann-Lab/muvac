@@ -1,10 +1,7 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 
-die() {
-	echo ":ERROR: $*" >&2
-	exit 1
-}
+source "$(dirname "$(readlink -e "$0")")/activate.sh" -c true -x cleanup || exit 1
 
 cleanup() {
 	[[ -e $TMPDIR ]] && {
@@ -34,12 +31,6 @@ cleanup() {
 	}
 }
 
-# defines INSDIR and by sourcing bashbone it defines BASHBONEVERSION variable as well
-source $(dirname $(readlink -e $0))/activate.sh -c true || die
-
-trap 'configure::exit -p $$ -f cleanup $?' EXIT
-trap 'die "killed"' INT TERM
-
 VERSION=$version
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
@@ -53,66 +44,70 @@ TMPDIR=$OUTDIR
 REGEX='\S+:(\d+):(\d+):(\d+)\s*.*'
 DISTANCE=5
 
+BASHBONE_ERROR="parameterization issue"
+options::parse "$@"
 
-options::parse "$@" || die "parameterization issue"
-
-mkdir -p $OUTDIR || die "cannot access $OUTDIR"
+BASHBONE_ERROR="cannot access $OUTDIR"
+mkdir -p $OUTDIR
 OUTDIR=$(readlink -e $OUTDIR)
 [[ ! $LOG ]] && LOG=$OUTDIR/run.log
-mkdir -p $(dirname $LOG) || die "cannot access $LOG"
-printf '' > $LOG || die "cannot access $LOG"
+BASHBONE_ERROR="cannot access $LOG"
+mkdir -p "$(dirname "$LOG")"
 
+BASHBONE_ERROR="cannot access $TMPDIR"
 if [[ $PREVIOUSTMPDIR ]]; then
 	TMPDIR=$PREVIOUSTMPDIR
-	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
+	mkdir -p $TMPDIR
 	TMPDIR=$(readlink -e $TMPDIR)
 else
-	SKIPslice=false
-	mkdir -p $TMPDIR || die "cannot access $TMPDIR"
+	mkdir -p $TMPDIR
 	TMPDIR=$(readlink -e $TMPDIR)
-	TMPDIR=$(mktemp -d -p $TMPDIR muvac.XXXXXXXXXX) || die "cannot access $TMPDIR"
+	TMPDIR=$(mktemp -d -p $TMPDIR muvac.XXXXXXXXXX)
 fi
 
 ${INDEX:=false} || {
-	[[ ! $NFASTQ1 ]] && [[ ! $TFASTQ1 ]] && [[ ! $NMAPPED ]] && [[ ! $TMAPPED ]] && die "fastq or sam/bam file input missing"
+	BASHBONE_ERROR="fastq or sam/bam file input missing"
+	[[ ! $NFASTQ1 ]] && [[ ! $TFASTQ1 ]] && [[ ! $NMAPPED ]] && [[ ! $TMAPPED ]] && false
 }
 
-[[ ! $NFASTQ2 ]] && {
-	[[ "$NOcmo" == "false" ]] && {
-		commander::warn "no second mate fastq file given - proceeding without mate overlap clipping"
-		NOcmo=true
-	}
+[[ ! $NFASTQ2 && "$NOcmo" == "false" ]] && {
+	commander::warn "second mate fastq file missing. proceeding without mate overlap clipping"
+	NOcmo=true
 }
 
 [[ $GENOME ]] && {
-	readlink -e $GENOME | file -f - | grep -qF ASCII || die "genome file does not exists or is compressed $GENOME"
+	BASHBONE_ERROR="genome file does not exists or is compressed $GENOME"
+	readlink -e $GENOME | file -f - | grep -qF ASCII
 	[[ ! -s $GENOME.md5.sh ]] && cp $(dirname $(readlink -e $0))/bashbone/lib/md5.sh $GENOME.md5.sh
 	source $GENOME.md5.sh
 } || {
-	${INDEX:=false} && die "genome file missing"
-	commander::warn "proceeding without genome file"
+	BASHBONE_ERROR="genome file missing"
+	! ${INDEX:=false}
+	commander::warn "genome file missing. proceeding without mapping"
 	SKIPmd5=true
 	NOsege=true
 	NOstar=true
 }
 
-[[ $GTF ]] && {
-	readlink -e $GTF | file -f - | grep -qF ASCII || die "annotation file does not exists or is compressed $GTF"
-} || {
+if [[ $GTF ]]; then
+	BASHBONE_ERROR="annotation file does not exists or is compressed $GTF"
+	readlink -e $GTF | file -f - | grep -qF ASCII
+else
 	readlink -e $GENOME.gtf | file -f - | grep -qF ASCII && {
 		GTF=$GENOME.gtf
 	} || {
-		${INDEX:=false} && die "annotation file missing"
+		BASHBONE_ERROR="annotation file missing"
+		! ${INDEX:=false}
 		commander::warn "proceeding without gtf file"
 	}
-}
+fi
 
 [[ $DBSNP ]] && {
-	readlink -e $DBSNP &> /dev/null || die "dbSNP file does not exists $DBSNP"
+	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
+	readlink -e $DBSNP &> /dev/null
 } || {
 	[[ $TFASTQ1 ]] && commander::warn "proceeding without dbSNP file"
 }
-
 
 declare -a FASTQ1 FASTQ2 MAPPED NIDX TIDX
 helper::addmemberfunctions -v FASTQ1 -v FASTQ2 -v MAPPED -v NIDX -v TIDX
@@ -129,19 +124,25 @@ else
 	NIDX.push $(NMAPPED.idxs)
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
-
-commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONEVERSION started with command: $CMD" > $LOG || die "cannot access $LOG"
-commander::printinfo "temporary files go to $HOSTNAME:$TMPDIR" >> $LOG
-progress::log -v $VERBOSITY -o $LOG
-
 [[ ! $FASTQ2 ]] && NOcmo=true
-if [[ $TFASTQ1 ]]; then
-	pipeline::somatic 2> >(tee -ai $LOG >&2) >> $LOG
-	[[ $? -gt 0 ]] && die
+
+progress::log -v $VERBOSITY -o $LOG
+commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -ai "$LOG"
+commander::printinfo "temporary files go to: $HOSTNAME:$TMPDIR" | tee -ia "$LOG"
+
+if ${INDEX:=false}; then
+	BASHBONE_ERROR="indexing failed"
+	progress::observe -v $VERBOSITY -o "$LOG" -f pipeline::index
 else
-	pipeline::germline 2> >(tee -ai $LOG >&2) >> $LOG
-	[[ $? -gt 0 ]] && die
+	if [[ $TFASTQ1 ]]; then
+		BASHBONE_ERROR="somatic variant calling pipeline failed"
+		progress::observe -v $VERBOSITY -o "$LOG" -f pipeline::somatic
+	else
+		BASHBONE_ERROR="germline variant calling pipeline failed"
+		progress::observe -v $VERBOSITY -o "$LOG" -f pipeline::germline
+	fi
 fi
+unset BASHBONE_ERROR
 
 ${Smd5:=false} || {
 	commander::printinfo "finally updating genome and annotation md5 sums" >> $LOG
