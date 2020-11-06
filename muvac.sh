@@ -151,7 +151,7 @@ if ${INDEX:=false}; then
 	BASHBONE_ERROR="indexing failed"
 	progress::observe -v $VERBOSITY -o "$LOG" -f pipeline::index
 else
-	if [[ $TFASTQ1 ]]; then
+	if [[ $TFASTQ1 || $TMAPPED ]]; then
 		BASHBONE_ERROR="somatic variant calling pipeline failed"
 		progress::observe -v $VERBOSITY -o "$LOG" -f pipeline::somatic
 	else
