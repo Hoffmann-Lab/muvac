@@ -272,10 +272,10 @@ pipeline::germline() {
 		-p $TMPDIR \
 		-t $THREADS
 
-	pipeline::_slice ${NOrg:=false} ${SKIPrg:=false}
+	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
 	alignment::addreadgroup \
-		-S ${NOrg:=false} \
-		-s ${SKIPrg:=false} \
+		-S ${NOaddrg:=false} \
+		-s ${SKIPaddrg:=false} \
 		-t $THREADS \
 		-m $MEMORY \
 		-n ${RGPREFIX:='SAMPLE'} \
@@ -314,7 +314,6 @@ pipeline::germline() {
 		-r mapper \
 		-t $THREADS \
 		-o $OUTDIR/stats
-
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -381,7 +380,7 @@ pipeline::germline() {
 		-r mapper
 
 	${NOpon:=false} || {
-		pipeline::_slice ${NOpon:=false} ${NOpon:=false}
+		pipeline::_slice ${NOpon:=false} ${SKIPpon:=false}
 		variants::panelofnormals \
 			-S ${NOpon:=false} \
 			-s ${SKIPpon:=false} \
@@ -437,10 +436,10 @@ pipeline::somatic() {
 		-p $TMPDIR \
 		-t $THREADS
 
-	pipeline::_slice ${NOrg:=false} ${SKIPrg:=false}
+	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
 	alignment::addreadgroup \
-		-S ${NOrg:=false} \
-		-s ${SKIPrg:=false} \
+		-S ${NOaddrg:=false} \
+		-s ${SKIPaddrg:=false} \
 		-t $THREADS \
 		-m $MEMORY \
 		-r mapper \
@@ -481,17 +480,19 @@ pipeline::somatic() {
 		-t $THREADS \
 		-o $OUTDIR/stats
 
-	pipeline::_slice ${NOsplitreads:=true} ${SKIPnsplit:=false}
-	alignment::splitncigar \
-		-S ${NOnsplit:=false} \
-		-s ${SKIPnsplit:=false} \
-		-t $THREADS \
-		-m $MEMORY \
-		-g $GENOME \
-		-r mapper \
-		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+	${NOsplitreads:=true} || {
+		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
+		alignment::splitncigar \
+			-S ${NOnsplit:=false} \
+			-s ${SKIPnsplit:=false} \
+			-t $THREADS \
+			-m $MEMORY \
+			-g $GENOME \
+			-r mapper \
+			-c slicesinfo \
+			-p $TMPDIR \
+			-o $OUTDIR/mapped
+	}
 
 	pipeline::_slice ${NOreo:=false} ${SKIPreo:=false}
 	alignment::reorder \
