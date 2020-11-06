@@ -175,7 +175,7 @@ pipeline::_preprocess(){
 }
 
 
-pipeline::mapping(){
+pipeline::_mapping(){
 	if [[ ! $MAPPED ]]; then
 		alignment::segemehl \
 			-S ${NOsege:=false} \

@@ -75,15 +75,12 @@ options::usage() {
 		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
 		                                        NOTE: necessary for sucessful deduplication, if unavailable set to 'null'
 		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
+		-no-stats| --no-statistics            : disables preprocessing statistics
 		-no-adgrp| --no-addreadgroup          : disables proper read group modification by Picard
 		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-realn| --no-realign               : disables indel realignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
-		-no-sege | --no-segemehl              : disables mapping by segemehl
-		-no-star | --no-star                  : disables mapping by STAR
-		-no-bwa  | --no-bwa                   : disables mapping by BWA, when -no-split is used. default: no BWA mapping
-		-no-stats| --no-statistics            : disables preprocessing statistics
 
 		GERMLINE/PON OPTIONS
 		-1       | --fq1 [path,..]            : fastq input - single or first pair, comma seperated
