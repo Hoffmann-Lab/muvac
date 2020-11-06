@@ -82,14 +82,14 @@ options::usage() {
 		-no-realn| --no-realign               : disables indel realignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
 
-		GERMLINE/PON OPTIONS
+		PON/GERMLINE OPTIONS
 		-1       | --fq1 [path,..]            : fastq input. single or first pair. comma seperated
 		-2       | --fq2 [path,..]            : fastq input. second pair. comma seperated
 		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
 		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
-		-no-dbsnp| --no-dbsnp                 : disbale dbSNP usage for BQSR and variant calling
-		-no-pon  | --no-panelofnormals        : disables panel of normals variant calling to be used as a databse for later somatic calls
+		-no-dbsnp| --no-dbsnp                 : disbales dbSNP usage for BQSR and variant calling
+		-no-pon  | --no-panelofnormals        : switch to germline variant calling and disables custom panel of normals calling
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
 		-no-hc   | --no-haplotypecaller       : disables variant calling by HaplotypeCaller
 

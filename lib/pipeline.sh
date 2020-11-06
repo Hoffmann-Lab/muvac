@@ -401,6 +401,8 @@ pipeline::germline() {
 			-r mapper \
 			-p $TMPDIR \
 			-o $OUTDIR/pon
+
+		return 0
 	}
 
 	pipeline::_slice ${NOhc:=false} ${SKIPhc:=false}
