@@ -102,12 +102,29 @@ else
 	}
 fi
 
-[[ $DBSNP ]] && {
+if [[ $DBSNP ]]; then
 	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
 	readlink -e $DBSNP &> /dev/null
-} || {
-	[[ $TFASTQ1 ]] && commander::warn "proceeding without dbSNP file"
-}
+else
+	readlink -e $GENOME.vcf | file -f - | grep -qF ASCII && {
+		DBSNP=$GENOME.vcf
+	} || {
+		[[ -e $GENOME.vcf.gz && -e $GENOME.vcf.gz.tbi ]] && DBSNP=$GENOME.vcf.gz
+	}
+	[[ ! $DBSNP ]] && commander::warn "proceeding without dbSNP file"
+fi
+
+if [[ $PONDB ]]; then
+	BASHBONE_ERROR="pon file does not exists $PONDB"
+	readlink -e $PONDB &> /dev/null
+else
+	readlink -e $GENOME.pon.vcf | file -f - | grep -qF ASCII && {
+		PONDB=$GENOME.pon.vcf
+	} || {
+		[[ -e $GENOME.pon.vcf.gz && -e $GENOME.pon.vcf.gz.tbi ]] && PONDB=$GENOME.pon.vcf.gz
+	}
+	[[ ! $PONDB ]] && commander::warn "proceeding without pon file"
+fi
 
 declare -a FASTQ1 FASTQ2 MAPPED NIDX TIDX
 helper::addmemberfunctions -v FASTQ1 -v FASTQ2 -v MAPPED -v NIDX -v TIDX

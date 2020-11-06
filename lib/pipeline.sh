@@ -380,7 +380,7 @@ pipeline::germline() {
 		-o $OUTDIR/mapped \
 		-r mapper
 
-	if [[ $PON ]]; then
+	${NOpon:=false} || {
 		pipeline::_slice ${NOpon:=false} ${NOpon:=false}
 		variants::panelofnormals \
 			-S ${NOpon:=false} \
@@ -391,7 +391,7 @@ pipeline::germline() {
 			-r mapper \
 			-c slicesinfo \
 			-p $TMPDIR \
-			-o $OUTDIR/variants
+			-o $OUTDIR/pon
 
 		variants::makepondb \
 			-S ${NOpondb:=false} \
@@ -400,10 +400,8 @@ pipeline::germline() {
 			-g $GENOME \
 			-r mapper \
 			-p $TMPDIR \
-			-o $OUTDIR/variants
-
-		return 0
-	fi
+			-o $OUTDIR/pon
+	}
 
 	pipeline::_slice ${NOhc:=false} ${SKIPhc:=false}
 	variants::haplotypecaller \
@@ -550,11 +548,11 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-g $GENOME \
+		-d "$(${NOpon:-false} || echo $PONDB)" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
 		-c slicesinfo \
-		-d ${MYPON:=false} \
 		-p $TMPDIR \
 		-o $OUTDIR/variants
 

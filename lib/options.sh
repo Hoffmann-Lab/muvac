@@ -43,10 +43,10 @@ options::usage() {
 		-redo    | --redo [string,..]         : just rerun specific pipeline step(s). comma seperated (see -dev)
 
 		GENOME OPTIONS
-		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed (see dlgenome.sh)
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf (see dlgenome.sh)
-		-s       | --snp [path]               : genome dbSNP input - optional, default: [-g].vcf (see dlgenome.sh)
-		-no-dbsnp| --no-dbsnp                 : disbale dbSNP usage for BQSRecalibration and variant calling
+		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
+		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
+		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
+		-p       | --pon [path]               : genome panel of normals input for somatic varaint calling. default: [-g].pon.vcf.gz
 		-x       | --index                    : create all requiered genome indices and md5 sums and exit. otherwise create necessary indices on the fly
 		-no-sege | --no-segemehl              : disables indexing for segemehl when used with -x
 		-no-star | --no-star                  : disables indexing for STAR when used with -x. use when indexing is applied on plug-n-play CTAT resource
@@ -65,7 +65,7 @@ options::usage() {
 		ALIGNMENT OPTIONS
 		-d       | --distance                 : maximum read alignment edit distance in % - default: 5
 		-i       | --insertsize               : maximum allowed insert for aligning mate pairs - default: 200000
-		-split   | --split                    : enable split read mapping e.g. to call variants from RNA-Seq data
+		-split   | --split                    : enables split read mapping and afterwards split alignments by N-cigar strings to call variants from RNA-Seq data
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
 		-no-bwa  | --no-bwa                   : disables mapping by BWA
@@ -83,22 +83,26 @@ options::usage() {
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
 
 		GERMLINE/PON OPTIONS
-		-1       | --fq1 [path,..]            : fastq input - single or first pair, comma seperated
-		-2       | --fq2 [path,..]            : fastq input - optional. second pair, comma seperated
-		-m       | --mapped [path,..]         : SAM/BAM input - comma seperated (replaces -1 and -2)
+		-1       | --fq1 [path,..]            : fastq input. single or first pair. comma seperated
+		-2       | --fq2 [path,..]            : fastq input. second pair. comma seperated
+		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
 		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
-		-pon     | --panelofnormals           : disables variant calling and instead prepares a panel of normals for subsequent somatic calls
-		-no-pondb| --no-pondatabase           : disables creation of panel of normals database
+		-no-dbsnp| --no-dbsnp                 : disbale dbSNP usage for BQSR and variant calling
+		-no-pon  | --no-panelofnormals        : disables panel of normals variant calling to be used as a databse for later somatic calls
+		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
+		-no-hc   | --no-haplotypecaller       : disables variant calling by HaplotypeCaller
 
 		SOMATIC OPTIONS
-		-n1      | --normalfq1 [path,..]      : normal fastq input - single or first pair, comma seperated
-		-n2      | --normalfq2 [path,..]      : normal fastq input - optional. second pair, comma seperated
-		-t1      | --tumorfq1 [path,..]       : tumor fastq input - single or first pair, comma seperated
-		-t2      | --tumorfq2 [path,..]       : tumor fastq input - optional. second pair, comma seperated
-		-nm      | --normalmapped [path,..]   : normal SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
-		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input - comma seperated (replaces -n1 -n2 -t1 -t2)
-		-mypon   | --my-panelofnormals        : priorize own panel of normals database over [-g].pon.vcf.gz
+		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first pair. comma seperated
+		-n2      | --normalfq2 [path,..]      : normal fastq input. second pair. comma seperated
+		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first pair. comma seperated
+		-t2      | --tumorfq2 [path,..]       : tumor fastq input. second pair. comma seperated
+		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
+		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
+		-no-mu   | --no-mutect                : disables variant calling by Mutect2
+		-no-pon  | --no-panelofnormals        : disbale integration of panel of normals into variant calling
 
 		REFERENCES
 		(c) Konstantin Riege
@@ -108,7 +112,7 @@ options::usage() {
 		Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY
 		This requierement needs to be fulfilled in all additional VCF files, too - see below.
 
-		To obtain panel of normals, common somatic variants and population variants with allele frequencies visit
+		To obtain comprehensive panel of normals, common somatic variants and population variants with allele frequencies visit
 		HG38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
 		HG19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
 		After download, place files next to your genome fasta file with equal name plus extension suffix as shown
@@ -174,6 +178,7 @@ options::checkopt (){
 		-mem | --memory) arg=true; MEMORY=$2;;
 		-g   | --genome) arg=true; GENOME=$2;;
 		-s   | --snp) arg=true; DBSNP=$2;;
+		-p   | --pon) arg=true; PONDB=$2;;
 		-gtf | --gtf) arg=true; GTF=$2;;
 		-o   | --out) arg=true; OUTDIR=$2;;
 		-l   | --log) arg=true; LOG=$2;;
@@ -193,8 +198,6 @@ options::checkopt (){
 		-d   | --distance) arg=true; DISTANCE=$2;;
 		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
 		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
-		-pon | --panelofnormals) PON=true;;
-		-mypon | --my-panelofnormals) MYPON=true;;
 
 		-resume | --resume-from) arg=true; options::resume "$2";;
 		-skip | --skip) arg=true; options::skip "$2";;
@@ -224,10 +227,12 @@ options::checkopt (){
 		-no-realn | --no-realign) NOrealn=true;;
 		-no-bqsr  | --no-qualrecalibration) NObqsr=true;;
 		-no-dbsnp | --no-dbsnp) NOdbsnp=true;;
+		-no-pon   | --no-panelofnormals) NOpon=true;;
 		-no-pondb | --no-pondatabase) NOpondb=true;;
 
 		-no-hc    | --no-haplotypecaller) NOhc=true;;
 		-no-mu    | --no-mutect) NOmu=true;;
+
 		-no-fb    | --no-freebayes) NOfb=true;;
 		-no-bt    | --no-bcftools) NObt=true;;
 		-no-pp    | --no-platypus) NOpp=true;;
