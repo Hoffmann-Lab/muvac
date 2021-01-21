@@ -22,6 +22,7 @@ Muvac leverages on bashbone, which is a bash library for workflow and pipeline d
   - sorting, filtering, unique alignment extraction, removal of optical duplicates
   - read group modification, split N-cigar reads, left-alignment and base quality score recalibration
 - Germline and somatic variant detection from DNA or RNA sequencing experiments plus VCF normalization
+- Tree reconstruction from homozygous sites
 
 # License
 
@@ -178,6 +179,10 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 ```
 
 Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). More sequences can be found via Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document&filter=manuals&p=1>), the resource of Trimmomatic (<https://github.com/timflutre/trimmomatic/tree/master/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration/contaminant_list.txt>).
+<br>
+Nextera Transposase Sequence: CTGTCTCTTATACACATCT
+<br>
+Illumina Universal Adapter: ATGTGTATAAGAGACA
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
@@ -274,32 +279,32 @@ muvac.sh [...] -redo bqsr,idx,hc
 
 | Tool | Source | DOI |
 | ---  | ---    | --- |
-| BamUtil       | <https://genome.sph.umich.edu/wiki/BamUtil>                         | 10.1101/gr.176552.114 |
-| BCFtools      | <http://www.htslib.org/doc/bcftools.html>                           | 10.1093/bioinformatics/btr509 |
-| BEDTools      | <https://bedtools.readthedocs.io>                                   | 10.1093/bioinformatics/btq033 |
-| BWA           | <https://github.com/lh3/bwa>                                        | 10.1093/bioinformatics/btp324 |
-| Cutadapt      | <https://cutadapt.readthedocs.io/en/stable>                         | 10.14806/ej.17.1.200 |
-| fastqc        | <https://www.bioinformatics.babraham.ac.uk/projects/fastqc>         | NA |
-| GATK          | <https://github.com/broadinstitute/gatk>                            | 10.1101/gr.107524.110 <br> 10.1038/ng.806 |
-| Picard        | <http://broadinstitute.github.io/picard>                            | NA |
-| Rcorrector    | <https://github.com/mourisl/Rcorrector>                             | 10.1186/s13742-015-0089-y |
-| ReSeqC        | <http://rseqc.sourceforge.net>                                      | 10.1093/bioinformatics/bts356 |
-| segemehl      | <http://www.bioinf.uni-leipzig.de/Software/segemehl>                | 10.1186/gb-2014-15-2-r34 <br> 10.1371/journal.pcbi.1000502 |
-| SortMeRNA     | <https://bioinfo.lifl.fr/RNA/sortmerna>                             | 10.1093/bioinformatics/bts611 |
-| STAR          | <https://github.com/alexdobin/STAR>                                 | 10.1093/bioinformatics/bts635 |
-| Trimmomatic   | <http://www.usadellab.org/cms/?page=trimmomatic>                    | 10.1093/bioinformatics/btu170 |
-| vcflib        | <https://github.com/vcflib/vcflib>                                  | NA |
-| Vt            | <https://genome.sph.umich.edu/wiki/Vt>                              | 10.1093/bioinformatics/btv112 |
+| BamUtil       | <https://genome.sph.umich.edu/wiki/BamUtil>                  | 10.1101/gr.176552.114 |
+| BCFtools      | <http://www.htslib.org/doc/bcftools.html>                    | 10.1093/bioinformatics/btr509 |
+| BEDTools      | <https://bedtools.readthedocs.io>                            | 10.1093/bioinformatics/btq033 |
+| BWA           | <https://github.com/lh3/bwa>                                 | 10.1093/bioinformatics/btp324 |
+| Cutadapt      | <https://cutadapt.readthedocs.io/en/stable>                  | 10.14806/ej.17.1.200 |
+| fastqc        | <https://www.bioinformatics.babraham.ac.uk/projects/fastqc>  | NA |
+| freebayes     | <https://github.com/ekg/freebayes>                           | arXiv:1207.3907 |
+| GATK          | <https://github.com/broadinstitute/gatk>                     | 10.1101/gr.107524.110 <br> 10.1038/ng.806 |
+| Picard        | <http://broadinstitute.github.io/picard>                     | NA |
+| Platypus      | <https://rahmanteamdevelopment.github.io/Platypus>           | 10.1038/ng.3036 |
+| Rcorrector    | <https://github.com/mourisl/Rcorrector>                      | 10.1186/s13742-015-0089-y |
+| ReSeqC        | <http://rseqc.sourceforge.net>                               | 10.1093/bioinformatics/bts356 |
+| segemehl      | <http://www.bioinf.uni-leipzig.de/Software/segemehl>         | 10.1186/gb-2014-15-2-r34 <br> 10.1371/journal.pcbi.1000502 |
+| SortMeRNA     | <https://bioinfo.lifl.fr/RNA/sortmerna>                      | 10.1093/bioinformatics/bts611 |
+| STAR          | <https://github.com/alexdobin/STAR>                          | 10.1093/bioinformatics/bts635 |
+| Trimmomatic   | <http://www.usadellab.org/cms/?page=trimmomatic>             | 10.1093/bioinformatics/btu170 |
+| VarDict       | <https://github.com/AstraZeneca-NGS/VarDict>                 | 10.1093/nar/gkw227 |
+| VarScan       | <http://dkoboldt.github.io/varscan>                          | 10.1101/gr.129684.111 |
+| vcflib        | <https://github.com/vcflib/vcflib>                           | NA |
+| Vt            | <https://genome.sph.umich.edu/wiki/Vt>                       | 10.1093/bioinformatics/btv112 |
 
 ## In preparation
 
 | Tool | Source | DOI |
 | ---  | ---    | --- |
-| freebayes       | <https://github.com/ekg/freebayes>                         | arXiv:1207.3907 |
-| Platypus        | <https://rahmanteamdevelopment.github.io/Platypus>         | 10.1038/ng.3036 |
-| SnpEff          | <https://pcingola.github.io/SnpEff>                        | 10.4161/fly.19695 |
-| VarDict         | <https://github.com/AstraZeneca-NGS/VarDict>               | 10.1093/nar/gkw227 |
-| VarScan         | <http://dkoboldt.github.io/varscan>                        | 10.1101/gr.129684.111 |
+| SnpEff        | <https://pcingola.github.io/SnpEff>                          | 10.4161/fly.19695 |
 
 # Supplementary information
 
@@ -312,7 +317,6 @@ for i in *R1.fastq.gz; do
 	j=${i/R1/R2}
 	sh=job_$(basename $i .R1.fastq.gz)
 	commander::makecmd -a cmd1 -c {COMMANDER[0]}<<- CMD
-		source <path/of/installation/latest/muvac/activate.sh>;
 		muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> -1 $i -2 $j
 	CMD
 done
@@ -320,11 +324,12 @@ commander::qsubcmd -r -l h="<hostname>|<hostname>" -p <env> -t <threads> -i <ins
 # analogously: echo job.\$SGE_TASK_ID.sh | qsub -sync n -pe <env> <threads> -t 1-<#jobs> -tc <instances> -l h="<hostname>|<hostname>" -S /bin/bash -N <jobname> -o <logfile> -j y -V -cwd
 ```
 
-In some cases a glibc pthreads bug (<https://sourceware.org/bugzilla/show_bug.cgi?id=23275>) may cause pigz failures (`internal threads error`) and premature termination of toola leveraging on it e.g. Cutadapt. One can circumvent this by upgrading the operating system or making use of an alternative pthreads library and `LD_PRELOAD`
+In some cases a glibc pthreads bug (<https://sourceware.org/bugzilla/show_bug.cgi?id=23275>) may cause pigz failures (`internal threads error`) and premature termination of tools leveraging on it e.g. Cutadapt. One can circumvent this by e.g. making use of an alternative pthreads library via `LD_PRELOAD`
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
-LD_PRELOAD=/lib64/noelision/libpthread.so.0 muvac.sh [...]
+LD_PRELOAD=/lib64/noelision/libpthread.so.0 muvac.sh
+LD_PRELOAD=/gsc/biosw/src/glibc-2.32/lib/libpthread.so.0 muvac.sh
 ```
 
 # Closing remarks
