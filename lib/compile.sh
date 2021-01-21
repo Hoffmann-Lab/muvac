@@ -12,6 +12,7 @@ compile::all(){
 	compile::trimmomatic -i "$insdir" -t $threads
 	compile::sortmerna -i "$insdir" -t $threads
 	compile::segemehl -i "$insdir" -t $threads
+	compile::newicktopdf -i "$insdir" -t $threads
 
 	return 0
 }
@@ -54,18 +55,16 @@ compile::conda_tools() {
 		envs[$tool]=true
 	done < <(conda info -e | awk -v prefix="^"$insdir '$NF ~ prefix {print $1}')
 
-	# python 3 envs
-	# ensure star compatibility with CTAT genome index and STAR-fusion
-	for tool in fastqc cutadapt rcorrector star=2.7.2b bwa picard bamutil gatk4 freebayes varscan igv; do
+	for tool in fastqc cutadapt rcorrector star bwa picard bamutil gatk4 freebayes varscan raxml; do
 		n=${tool//[^[:alpha:]]/}
 		$upgrade && ${envs[$n]:=false} && continue
 		doclean=true
 
 		commander::printinfo "setup conda $tool env"
-		conda create -y -n $n python=3
+		conda create -y -n $n #python=3
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
 		# link commonly used base binaries into env
-		for bin in perl samtools bedtools; do
+		for bin in perl samtools bcftools bedtools vcfsamplediff; do
 			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
 		done
 	done
@@ -77,9 +76,9 @@ compile::conda_tools() {
 		doclean=true
 
 		commander::printinfo "setup conda $tool env"
-		conda create -y -n $n python=3
-		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool vardict-java
-		for bin in perl samtools bedtools; do
+		conda create -y -n $n #python=3
+		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool vardict-java readline=6
+		for bin in perl samtools bcftools bedtools vcfsamplediff; do
 			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
 		done
 	}
@@ -90,9 +89,9 @@ compile::conda_tools() {
 		doclean=true
 
 		commander::printinfo "setup conda $tool env"
-		conda create -y -n $n python=3
+		conda create -y -n $n #python=3
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool snpsift
-		for bin in perl samtools bedtools; do
+		for bin in perl samtools bcftools bedtools vcfsamplediff; do
 			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
 		done
 	}
@@ -102,9 +101,9 @@ compile::conda_tools() {
 	n=platypus
 	$upgrade && ${envs[$n]:=false} || {
 		commander::printinfo "setup conda $tool env"
-		conda create -y -n $n python=2
+		conda create -y -n $n #python=2
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
-		for bin in perl samtools bedtools; do
+		for bin in perl samtools bcftools bedtools vcfsamplediff; do
 			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
 		done
 	}
