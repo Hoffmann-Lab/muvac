@@ -19,6 +19,7 @@ pipeline::index(){
 		-t $THREADS \
 		-g $GENOME \
 		-x $GENOME.star.idx \
+		-f $GTF \
 		-o $TMPDIR \
 		-p $TMPDIR \
 		-r NA1 \
@@ -354,7 +355,7 @@ pipeline::germline() {
 		-o $OUTDIR/mapped
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -z DBSNP
+		variants::vcfzip -t $THREADS -i $DBSNP
 	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
@@ -404,16 +405,66 @@ pipeline::germline() {
 		return 0
 	}
 
-	pipeline::_slice ${NOhc:=false} ${SKIPhc:=false}
+	pipeline::_slice ${NOgatk:=false} ${SKIPgatk:=false}
 	variants::haplotypecaller \
-		-S ${NOhc:=false} \
-		-s ${SKIPhc:=false} \
+		-S ${NOgatk:=false} \
+		-s ${SKIPgatk:=false} \
 		-t $THREADS \
 		-m $MEMORY \
 		-g $GENOME \
 		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
 		-r mapper \
 		-c slicesinfo \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::bcftools \
+		-S ${NObt:=false} \
+		-s ${SKIPbt:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::freebayes \
+		-S ${NOfb:=false} \
+		-s ${SKIPfb:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::varscan \
+		-S ${NOvs:=false} \
+		-s ${SKIPvs:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::vardict \
+		-S ${NOvd:=false} \
+		-s ${SKIPvd:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::platypus \
+		-S ${NOpp:=false} \
+		-s ${SKIPpp:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
 		-p $TMPDIR \
 		-o $OUTDIR/variants
 
@@ -519,7 +570,7 @@ pipeline::somatic() {
 		-o $OUTDIR/mapped
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -z DBSNP
+		variants::vcfzip -t $THREADS -i $DBSNP
 	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
@@ -529,7 +580,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-d "$DBSNP" \
 		-r mapper \
 		-c slicesinfo \
 		-p $TMPDIR \
@@ -544,18 +595,79 @@ pipeline::somatic() {
 		-o $OUTDIR/mapped \
 		-r mapper
 
-	pipeline::_slice ${NOmu:=false} ${SKIPmu:=false}
+	pipeline::_slice ${NOgatk:=false} ${SKIPgatk:=false}
 	variants::mutect \
-		-S ${NOmu:=false} \
-		-s ${SKIPmu:=false} \
+		-S ${NOgatk:=false} \
+		-s ${SKIPgatk:=false} \
 		-t $THREADS \
 		-m $MEMORY \
 		-g $GENOME \
-		-d "$(${NOpon:-false} || echo $PONDB)" \
+		-n "$(${NOpon:-false} || echo $PONDB)" \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
 		-c slicesinfo \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::bcftools \
+		-S ${NObt:=false} \
+		-s ${SKIPbt:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-1 NIDX \
+		-2 TIDX \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::freebayes \
+		-S ${NOfb:=false} \
+		-s ${SKIPfb:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-1 NIDX \
+		-2 TIDX \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::varscan \
+		-S ${NOvs:=false} \
+		-s ${SKIPvs:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-1 NIDX \
+		-2 TIDX \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::vardict \
+		-S ${NOvd:=false} \
+		-s ${SKIPvd:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-1 NIDX \
+		-2 TIDX \
+		-p $TMPDIR \
+		-o $OUTDIR/variants
+
+	variants::platypus \
+		-S ${NOpp:=false} \
+		-s ${SKIPpp:=false} \
+		-t $THREADS \
+		-g $GENOME \
+		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-r mapper \
+		-1 NIDX \
+		-2 TIDX \
 		-p $TMPDIR \
 		-o $OUTDIR/variants
 
