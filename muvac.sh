@@ -29,6 +29,7 @@ cleanup() {
 			done
 		}
 	}
+	return 0
 }
 
 VERSION=$version
@@ -41,7 +42,6 @@ MEMORY=30000
 VERBOSITY=0
 OUTDIR=$PWD/results
 TMPDIR=$OUTDIR
-REGEX='\S+:(\d+):(\d+):(\d+)\s*.*'
 DISTANCE=5
 
 BASHBONE_ERROR="parameterization issue"
@@ -84,9 +84,9 @@ ${INDEX:=false} || {
 	BASHBONE_ERROR="genome file missing"
 	! ${INDEX:=false}
 	commander::warn "genome file missing. proceeding without mapping"
-	SKIPmd5=true
 	NOsege=true
 	NOstar=true
+	NObwa=true
 }
 
 if [[ $GTF ]]; then
@@ -96,9 +96,10 @@ else
 	readlink -e $GENOME.gtf | file -f - | grep -qF ASCII && {
 		GTF=$GENOME.gtf
 	} || {
-		BASHBONE_ERROR="annotation file missing"
-		! ${INDEX:=false}
-		commander::warn "proceeding without gtf file"
+		if ${INDEX:=false}; then
+			commander::warn "gtf file missing. proceeding without star"
+			NOstar=true
+		fi
 	}
 fi
 
@@ -111,7 +112,10 @@ else
 	} || {
 		[[ -e $GENOME.vcf.gz && -e $GENOME.vcf.gz.tbi ]] && DBSNP=$GENOME.vcf.gz
 	}
-	[[ ! $DBSNP ]] && commander::warn "proceeding without dbSNP file"
+	if [[ ! $DBSNP ]]; then
+		commander::warn "dbSNP file missing. proceeding without dbSNP file"
+		NOdbsnp=true
+	fi
 fi
 
 if [[ $PONDB ]]; then
@@ -123,7 +127,10 @@ else
 	} || {
 		[[ -e $GENOME.pon.vcf.gz && -e $GENOME.pon.vcf.gz.tbi ]] && PONDB=$GENOME.pon.vcf.gz
 	}
-	[[ ! $PONDB ]] && commander::warn "proceeding without pon file"
+	if [[ ! $PONDB ]]; then
+		commander::warn "pon file missing. proceeding without pon file"
+		NOpon=true
+	fi
 fi
 
 declare -a FASTQ1 FASTQ2 MAPPED NIDX TIDX
