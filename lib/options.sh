@@ -28,12 +28,11 @@ options::usage() {
 		                                        2 - get full output
 		-o       | --out [path]               : output directory. default: $OUTDIR
 		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
-		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/rippchen.XXXXXXXXXX
+		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
-		-mem     | --memory [value]           : amout of memory for creating bam slices and processing them in parallel instances
-		                                        available: $MAXMEMORY
-		                                        default: 30000 (allows for $MTHREADS instances)
+		-mem     | --memory [value]           : expected picard/gatk memory usage of a bam slice. determines number of slices and thus parallel instances
+		                                        default: 30000 (allows for $MTHREADS instances using $MAXMEMORY MB currently available memory)
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
 
 		ADVANCED OPTIONS
@@ -46,7 +45,7 @@ options::usage() {
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
-		-p       | --pon [path]               : genome panel of normals input for somatic varaint calling. default: [-g].pon.vcf.gz
+		-p       | --pon [path]               : genome panel of normals input for somatic variant calling. default: [-g].pon.vcf.gz
 		-x       | --index                    : create all requiered genome indices and md5 sums and exit. otherwise create necessary indices on the fly
 		-no-sege | --no-segemehl              : disables indexing for segemehl when used with -x
 		-no-star | --no-star                  : disables indexing for STAR when used with -x. use when indexing is applied on plug-n-play CTAT resource
@@ -61,6 +60,7 @@ options::usage() {
 		-a2      | --adapter2 [string,..]     : adapter sequence(s). second pair. comma seperated (can be the same as -a1. no revere complement required)
 		-cor     | --correction               : enable majority based raw read error correction
 		-rrm     | --rrnafilter               : enable rRNA filter
+		-no-stats| --no-statistics            : disables preprocessing statistics
 
 		ALIGNMENT OPTIONS
 		-d       | --distance                 : maximum read alignment edit distance in % - default: 5
@@ -73,13 +73,14 @@ options::usage() {
 		-no-sort | --no-sort                  : disables sorting alignments
 		-no-addrg| --no-addreadgroup          : disables proper read group modification by Picard
 		-no-rmd  | --no-removeduplicates      : disables removing duplicates
-		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: ^\S+:(\d+):(\d+):(\d+)\s*.*
-		                                        NOTE: necessary for sucessful deduplication, if unavailable set to 'null'
+		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: \S+:(\d+):(\d+):(\d+)\s*.*
+		                                        NOTE: necessary for successful optical deduplication. to disable or if unavailable, set to null
 		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
-		-no-stats| --no-statistics            : disables preprocessing statistics
 		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
+		-no-idx  | --no-index                 : disables indexing alignments
+		-no-stats| --no-statistics            : disables mapping statistics
 
 		PON/GERMLINE OPTIONS
 		-1       | --fq1 [path,..]            : fastq input. single or first pair. comma seperated
@@ -87,10 +88,9 @@ options::usage() {
 		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
 		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
-		-no-dbsnp| --no-dbsnp                 : disbales dbSNP usage for BQSR and variant calling
+		-no-dbsnp| --no-dbsnp                 : disbales dbSNP based variant filtering
 		-no-pon  | --no-panelofnormals        : switch to germline variant calling and disables custom panel of normals calling
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
-		-no-hc   | --no-haplotypecaller       : disables variant calling by HaplotypeCaller
 
 		SOMATIC OPTIONS
 		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first pair. comma seperated
@@ -100,8 +100,16 @@ options::usage() {
 		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
 		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
-		-no-mu   | --no-mutect                : disables variant calling by Mutect2
 		-no-pon  | --no-panelofnormals        : disbale integration of panel of normals into variant calling
+
+		VARIANT CALLER OPTIONS
+		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller/Mutect2
+		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
+		-no-vs   | --no-varscan               : disables variant calling by VarScan
+		-no-vd   | --no-vardict               : disables variant calling by VarDict
+		-no-fb   | --no-freebayes             : disables variant calling by freebayes
+		-no-pp   | --no-platypus              : disables variant calling by Platypus
+
 
 		REFERENCES
 		(c) Konstantin Riege
@@ -154,8 +162,13 @@ options::developer() {
 		idx   : intermediate and final bam indexing
 		pon   : panel of normals
 		pondb : panel of normals database
-		hc    : haplotypecaller
-		mu    : mutect
+		gatk  : haplotypecaller/mutect
+		bt    : bcftools
+		fb    : freebayes
+		vs    : varscan
+		vd    : vardict
+		pp    : platypus
+
 	EOF
 	exit 0
 }
@@ -168,69 +181,68 @@ options::developer() {
 options::checkopt (){
 	local arg=false
 	case $1 in
-		-h   | --help) (options::usage); exit 0;;
-		-dev | --devel) options::developer;;
+		-h        | --help) (options::usage); exit 0;;
+		-dev      | --devel) options::developer;;
+		-prevtmp  | --previoustmp) arg=true; PREVIOUSTMPDIR=$2;;
+		-resume   | --resume-from) arg=true; options::resume "$2";;
+		-skip     | --skip) arg=true; options::skip "$2";;
+		-redo     | --redo) arg=true; options::redo "$2";;
 
-		-r   | --remove) CLEANUP=true;;
-		-v   | --verbosity) arg=true; VERBOSITY=$2;;
-		-t   | --threads) arg=true; THREADS=$2;;
-		-mem | --memory) arg=true; MEMORY=$2;;
-		-g   | --genome) arg=true; GENOME=$2;;
-		-s   | --snp) arg=true; DBSNP=$2;;
-		-p   | --pon) arg=true; PONDB=$2;;
-		-gtf | --gtf) arg=true; GTF=$2;;
-		-o   | --out) arg=true; OUTDIR=$2;;
-		-l   | --log) arg=true; LOG=$2;;
-		-tmp | --tmp) arg=true; TMPDIR=$2;;
-		-prevtmp | --previoustmp) arg=true; PREVIOUSTMPDIR=$2;;
+		-tmp      | --tmp) arg=true; TMPDIR=$2;;
+		-r        | --remove) CLEANUP=true;;
+		-v        | --verbosity) arg=true; VERBOSITY=$2;;
+		-t        | --threads) arg=true; THREADS=$2;;
+		-mem      | --memory) arg=true; MEMORY=$2;;
 
-		-1   | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 < <(printf '%s' "$2");;
-		-2   | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 < <(printf '%s' "$2");;
-		-t1  | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 < <(printf '%s' "$2");;
-		-t2  | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 < <(printf '%s' "$2");;
-		-m   | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED < <(printf '%s' "$2");;
-		-mn  | --mapper-name) arg=true; MAPNAME=$2;;
-		-tm  | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED < <(printf '%s' "$2");;
-		-rx  | --regex) arg=true; REGEX=$2;;
-		-a1  | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 < <(printf '%s' "$2");;
-		-a2  | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 < <(printf '%s' "$2");;
-		-d   | --distance) arg=true; DISTANCE=$2;;
-		-i   | --insertsize) arg=true; INSERTSIZE=$2;;
-		-rgn | --readgroup-name) arg=true; RGPREFIX=$2;;
+		-x        | --index) INDEX=true;;
+		-g        | --genome) arg=true; GENOME=$2;;
+		-gtf      | --gtf) arg=true; GTF=$2;;
+		-o        | --out) arg=true; OUTDIR=$2;;
+		-l        | --log) arg=true; LOG=$2;;
 
-		-resume | --resume-from) arg=true; options::resume "$2";;
-		-skip | --skip) arg=true; options::skip "$2";;
-		-redo | --redo) arg=true; options::redo "$2";;
-
-		-x  | --index) INDEX=true;;
-
-		-cor      | --correction) NOcor=false;;
-		-rrm      | --rrnafilter) NOrrm=false;;
-		-split    | --split) NOsplitreads=false; NOnsplit=false;;
-
-		-no-qual  | --no-qualityanalysis) NOqual=true;;
-		-no-clip  | --no-clipping) NOclip=true;;
-		-no-trim  | --no-trimming) NOtrim=true;;
-		-no-stats | --no-statistics) NOstats=true;;
-
-		-no-sege  | --no-segemehl) NOsege=true;;
-		-no-star  | --no-star) NOstar=true;;
-		-no-bwa   | --no-bwa) NObwa=true;;
-		-no-uniq  | --no-uniqify) NOuniq=true;;
-		-no-sort  | --no-sort) NOsort=true;;
-		-no-rmd   | --no-removeduplicates) NOrmd=true;;
-		-no-cmo   | --no-clipmateoverlaps) NOcmo=true;;
-		-no-addrg | --no-addreadgroup) NOaddrg=true;;
-		-no-reo   | --no-reordering) NOreo=true;;
-		-no-laln  | --no-leftalign) NOlaln=true;;
-		-no-bqsr  | --no-qualrecalibration) NObqsr=true;;
+		-s        | --snp) arg=true; DBSNP=$2;;
+		-p        | --pon) arg=true; PONDB=$2;;
 		-no-dbsnp | --no-dbsnp) NOdbsnp=true;;
 		-no-pon   | --no-panelofnormals) NOpon=true;;
 		-no-pondb | --no-pondatabase) NOpondb=true;;
 
-		-no-hc    | --no-haplotypecaller) NOhc=true;;
-		-no-mu    | --no-mutect) NOmu=true;;
+		-1        | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 < <(printf '%s' "$2");;
+		-2        | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 < <(printf '%s' "$2");;
+		-t1       | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 < <(printf '%s' "$2");;
+		-t2       | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 < <(printf '%s' "$2");;
 
+		-a1       | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 < <(printf '%s' "$2");;
+		-a2       | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 < <(printf '%s' "$2");;
+		-d        | --distance) arg=true; DISTANCE=$2;;
+		-i        | --insertsize) arg=true; INSERTSIZE=$2;;
+		-split    | --split) NOsplitreads=false; NOnsplit=false;;
+		-no-qual  | --no-qualityanalysis) NOqual=true;;
+		-no-trim  | --no-trimming) NOtrim=true;;
+		-no-clip  | --no-clipping) NOclip=true;;
+		-cor      | --correction) NOcor=false;;
+		-rrm      | --rrnafilter) NOrrm=false;;
+		-no-sege  | --no-segemehl) NOsege=true;;
+		-no-star  | --no-star) NOstar=true;;
+		-no-bwa   | --no-bwa) NObwa=true;;
+
+		-m        | --mapped | -nm | --normalmapped) arg=true; mapfile -t -d ',' NMAPPED < <(printf '%s' "$2");;
+		-mn       | --mapper-name) arg=true; MAPNAME=$2;;
+		-tm       | --tumormapped) arg=true; mapfile -t -d ',' TMAPPED < <(printf '%s' "$2");;
+		-rx       | --regex) arg=true; REGEX=$2;;
+
+		-no-uniq  | --no-uniqify) NOuniq=true;;
+		-no-sort  | --no-sort) NOsort=true;;
+		-no-rmd   | --no-removeduplicates) NOrmd=true;;
+		-no-cmo   | --no-clipmateoverlaps) NOcmo=true;;
+		-rgn      | --readgroup-name) arg=true; RGPREFIX=$2;;
+		-no-addrg | --no-addreadgroup) NOaddrg=true;;
+		-no-reo   | --no-reordering) NOreo=true;;
+		-no-laln  | --no-leftalign) NOlaln=true;;
+		-no-bqsr  | --no-qualrecalibration) NObqsr=true;;
+		-no-idx   | --no-index) NOidx=true;;
+		-no-stats | --no-statistics) NOstats=true;;
+
+		-no-gatk  | --no-gatk) NOgatk=true;;
 		-no-fb    | --no-freebayes) NOfb=true;;
 		-no-bt    | --no-bcftools) NObt=true;;
 		-no-pp    | --no-platypus) NOpp=true;;
@@ -254,7 +266,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -268,7 +280,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -278,11 +290,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb hc mu bt fb pp vs vd; do
+		for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done
