@@ -56,8 +56,8 @@ options::usage() {
 		-no-qual | --no-qualityanalysis       : disables read quality analysis
 		-no-trim | --no-trimming              : disables quality trimming
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
-		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first pair. comma seperated (e.g. Illumina universal adapter AGATCGGAAGAGC)
-		-a2      | --adapter2 [string,..]     : adapter sequence(s). second pair. comma seperated (can be the same as -a1. no revere complement required)
+		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first mate. comma seperated
+		-a2      | --adapter2 [string,..]     : adapter sequence(s). mate pair. comma seperated (can be the same as [-a1]. no revere complement required)
 		-cor     | --correction               : enable majority based raw read error correction
 		-rrm     | --rrnafilter               : enable rRNA filter
 		-no-stats| --no-statistics            : disables preprocessing statistics
@@ -83,26 +83,27 @@ options::usage() {
 		-no-stats| --no-statistics            : disables mapping statistics
 
 		PON/GERMLINE OPTIONS
-		-1       | --fq1 [path,..]            : fastq input. single or first pair. comma seperated
-		-2       | --fq2 [path,..]            : fastq input. second pair. comma seperated
+		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
+		-2       | --fq2 [path,..]            : fastq input. mate pair. comma seperated
 		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
-		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - default: custom
+		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: SAMPLE
 		-no-dbsnp| --no-dbsnp                 : disbales dbSNP based variant filtering
 		-no-pon  | --no-panelofnormals        : switch to germline variant calling and disables custom panel of normals calling
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
 
 		SOMATIC OPTIONS
-		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first pair. comma seperated
-		-n2      | --normalfq2 [path,..]      : normal fastq input. second pair. comma seperated
-		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first pair. comma seperated
-		-t2      | --tumorfq2 [path,..]       : tumor fastq input. second pair. comma seperated
+		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma seperated
+		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma seperated
+		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first mate. comma seperated
+		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma seperated
 		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
 		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - default: custom
 		-no-pon  | --no-panelofnormals        : disbale integration of panel of normals into variant calling
 
 		VARIANT CALLER OPTIONS
+		-no-call | --no-call                  : disables variant calling for preprocessing purposes
 		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller/Mutect2
 		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
 		-no-vs   | --no-varscan               : disables variant calling by VarScan
@@ -242,6 +243,7 @@ options::checkopt (){
 		-no-idx   | --no-index) NOidx=true;;
 		-no-stats | --no-statistics) NOstats=true;;
 
+		-no-call  | --no-call) NOgatk=true; NOfb=true; NObt=true; NOpp=true; NOvs=true; NOvd=true;;
 		-no-gatk  | --no-gatk) NOgatk=true;;
 		-no-fb    | --no-freebayes) NOfb=true;;
 		-no-bt    | --no-bcftools) NObt=true;;
