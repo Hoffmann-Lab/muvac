@@ -83,10 +83,10 @@ The setup routine will always install the latest software via conda, which can b
 ./setup.sh -i conda_tools -d <path/of/installation>
 ```
 
-Trimmomatic and segemehl will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
+Trimmomatic, segemehl and mdless will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
 
 ```bash
-./setup.sh -i trimmomatic,segemehl -d <path/of/installation>
+./setup.sh -i trimmomatic,segemehl,mdless -d <path/of/installation>
 ```
 
 # Usage
