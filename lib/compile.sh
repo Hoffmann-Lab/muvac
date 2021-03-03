@@ -14,7 +14,7 @@ compile::all(){
 	compile::sortmerna -i "$insdir" -t $threads
 	compile::segemehl -i "$insdir" -t $threads
 	compile::newicktopdf -i "$insdir" -t $threads
-	compile::mdless
+	compile::mdless -i "$insdir" -t $threads
 
 	return 0
 }
