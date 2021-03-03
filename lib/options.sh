@@ -31,9 +31,10 @@ options::usage() {
 		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
-		-mem     | --memory [value]           : expected picard/gatk memory usage of a bam slice. determines number of slices and thus parallel instances
-		                                        default: 30000 (allows for $MTHREADS instances using $MAXMEMORY MB currently available memory)
+		-mem     | --memory [value]           : expected memory comsumption processing a bam slice. determines number of slices and parallel instances
+		                                        default: $MEMORY (allows for $MTHREADS instances using $MAXMEMORY MB of currently available memory)
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
+		-xmem    | --max-memory [value]       : total amount of allocatable memory. default: $MAXMEMORY MB i.e. currently available memory
 
 		ADVANCED OPTIONS
 		-dev     | --devel                    : prints list of keywords in processing order for advanced pipeline control
@@ -63,8 +64,8 @@ options::usage() {
 		-no-stats| --no-statistics            : disables preprocessing statistics
 
 		ALIGNMENT OPTIONS
-		-d       | --distance                 : maximum read alignment edit distance in % - default: 5
-		-i       | --insertsize               : maximum allowed insert for aligning mate pairs - default: 200000
+		-d       | --distance                 : maximum read alignment edit distance in %. default: 5
+		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 200000
 		-split   | --split                    : enables split read mapping and afterwards split alignments by N-cigar strings to call variants from RNA-Seq data
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
@@ -73,7 +74,7 @@ options::usage() {
 		-no-sort | --no-sort                  : disables sorting alignments
 		-no-addrg| --no-addreadgroup          : disables proper read group modification by Picard
 		-no-rmd  | --no-removeduplicates      : disables removing duplicates
-		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: \S+:(\d+):(\d+):(\d+)\s*.*
+		-rx      | --regex                    : regex of read name identifier with grouped tile information. default: \S+:(\d+):(\d+):(\d+)\s*.*
 		                                        NOTE: necessary for successful optical deduplication. to disable or if unavailable, set to null
 		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
 		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
@@ -86,8 +87,8 @@ options::usage() {
 		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
 		-2       | --fq2 [path,..]            : fastq input. mate pair. comma seperated
 		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - default: custom
-		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: SAMPLE
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
+		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls. default: SAMPLE
 		-no-dbsnp| --no-dbsnp                 : disbales dbSNP based variant filtering
 		-no-pon  | --no-panelofnormals        : switch to germline variant calling and disables custom panel of normals calling
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
@@ -99,7 +100,7 @@ options::usage() {
 		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma seperated
 		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
 		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - default: custom
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
 		-no-pon  | --no-panelofnormals        : disbale integration of panel of normals into variant calling
 
 		VARIANT CALLER OPTIONS
@@ -194,6 +195,7 @@ options::checkopt (){
 		-v        | --verbosity) arg=true; VERBOSITY=$2;;
 		-t        | --threads) arg=true; THREADS=$2;;
 		-mem      | --memory) arg=true; MEMORY=$2;;
+		-xmem     | --max-memory) arg=true; MAXMEMORY=$2;;
 
 		-x        | --index) INDEX=true;;
 		-g        | --genome) arg=true; GENOME=$2;;
