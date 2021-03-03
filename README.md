@@ -33,9 +33,17 @@ Copyleft (C) 2020, Konstantin Riege
 
 # Download
 
+This will download you a copy which includes the latest developments
+
 ```bash
 git clone --recursive https://github.com/koriege/muvac.git
-git checkout $(git describe --tags)
+```
+
+To check out the latest release (irregularly compiled) do
+
+```bash
+cd muvac
+git checkout --recurse-submodules $(git describe --tags)
 ```
 
 # Quick start (without installation)
