@@ -5,6 +5,7 @@ compile::all(){
 	local insdir threads
 	compile::_parse -r insdir -s threads "$@"
 	compile::bashbone -i "$insdir" -t $threads
+	compile::tools -i "$insdir" -t $threads
 	compile::muvac -i "$insdir" -t $threads
 	compile::conda -i "$insdir" -t $threads
 	compile::conda_tools -i "$insdir" -t $threads
@@ -13,6 +14,7 @@ compile::all(){
 	compile::sortmerna -i "$insdir" -t $threads
 	compile::segemehl -i "$insdir" -t $threads
 	compile::newicktopdf -i "$insdir" -t $threads
+	compile::mdless -i "$insdir" -t $threads
 
 	return 0
 }
@@ -39,6 +41,7 @@ compile::upgrade(){
 	local insdir threads
 	compile::_parse -r insdir -s threads "$@"
 	compile::bashbone -i "$insdir" -t $threads
+	compile::tools -i "$insdir" -t $threads
 	compile::muvac -i "$insdir" -t $threads
 	compile::conda_tools -i "$insdir" -t $threads -u true
 
@@ -57,62 +60,66 @@ compile::conda_tools() {
 
 	for tool in fastqc cutadapt rcorrector star bwa picard bamutil gatk4 freebayes varscan raxml; do
 		n=${tool//[^[:alpha:]]/}
-		$upgrade && ${envs[$n]:=false} && continue
-		doclean=true
+		$upgrade && ${envs[$n]:=false} || {
+			doclean=true
 
-		commander::printinfo "setup conda $tool env"
-		conda create -y -n $n #python=3
-		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
+			commander::printinfo "setup conda $tool env"
+			conda create -y -n $n #python=3
+			conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
+		}
 		# link commonly used base binaries into env
-		for bin in perl samtools bcftools bedtools vcfsamplediff; do
-			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+		for bin in perl bgzip samtools bcftools bedtools vcfsamplediff; do
+			conda list -n $n -f $bin | grep -qv '^#' || ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
 		done
 	done
 	chmod 755 "$insdir/conda/envs/rcorrector/bin/run_rcorrector.pl" # necessary fix
 
 	tool=vardict
-	n=${tool//[^[:alpha:]]/}
+	n=${tool/=*/}
+	n=${n//[^[:alpha:]]/}
 	$upgrade && ${envs[$n]:=false} || {
 		doclean=true
 
-		commander::printinfo "setup conda $tool env"
+		commander::printinfo "setup conda $n env"
 		conda create -y -n $n #python=3
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool vardict-java readline=6
-		for bin in perl samtools bcftools bedtools vcfsamplediff; do
-			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
-		done
 	}
+	for bin in perl bgzip samtools bcftools bedtools vcfsamplediff; do
+		conda list -n $n -f $bin | grep -qv '^#' || ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+	done
 
 	tool=snpeff
-	n=${tool//[^[:alpha:]]/}
+	n=${tool/=*/}
+	n=${n//[^[:alpha:]]/}
 	$upgrade && ${envs[$n]:=false} || {
 		doclean=true
 
-		commander::printinfo "setup conda $tool env"
+		commander::printinfo "setup conda $n env"
 		conda create -y -n $n #python=3
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool snpsift
-		for bin in perl samtools bcftools bedtools vcfsamplediff; do
-			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
-		done
 	}
+	for bin in perl bgzip samtools bcftools bedtools vcfsamplediff; do
+		conda list -n $n -f $bin | grep -qv '^#' || ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+	done
 
-	# python 2 envs
 	tool=platypus-variant
 	n=platypus
 	$upgrade && ${envs[$n]:=false} || {
-		commander::printinfo "setup conda $tool env"
+		doclean=true
+
+		commander::printinfo "setup conda $n env"
 		conda create -y -n $n #python=2
 		conda install -n $n -y --override-channels -c iuc -c conda-forge -c bioconda -c main -c defaults -c r -c anaconda $tool
-		for bin in perl samtools bcftools bedtools vcfsamplediff; do
-			[[ $(conda list -n $n -f $bin) ]] && ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
-		done
 	}
+	for bin in perl bgzip samtools bcftools bedtools vcfsamplediff; do
+		conda list -n $n -f $bin | grep -qv '^#' || ln -sfnr "$insdir/conda/bin/$bin" "$insdir/conda/envs/$n/bin/$bin"
+	done
 
 	$doclean && {
 		commander::printinfo "conda clean up"
 		conda clean -y -a
 	}
-	conda deactivate
 
+	conda deactivate
 	return 0
 }

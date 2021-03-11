@@ -15,17 +15,18 @@ cleanup() {
 			rm -rf $TMPDIR
 		}
 		[[ -e $OUTDIR ]] && {
+			local b
 			for f in "${FASTQ1[@]}"; do
 				readlink -e "$f" | file -f - | grep -qE '(gzip|bzip)' && b=$(basename $f | rev | cut -d '.' -f 3- | rev) || b=$(basename $f | rev | cut -d '.' -f 2- | rev)
 				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
 				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
 				find $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
 			done
-			local b
 			for f in "${MAPPED[@]}"; do
 				b=$(basename $f | rev | cut -d '.' -f 2- | rev)
 				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
 				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
+				find $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
 			done
 		}
 	}
@@ -36,7 +37,7 @@ VERSION=$version
 CMD="$(basename $0) $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
 MAXMEMORY=$(grep -F -i memavailable /proc/meminfo | awk '{printf("%d",$2*0.9/1024)}')
-MEMORY=30000
+MEMORY=20000
 [[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
 [[ $MTHREADS -eq 0 ]] && die "too less memory available ($MAXMEMORY)"
 VERBOSITY=0

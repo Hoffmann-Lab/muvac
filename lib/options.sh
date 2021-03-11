@@ -31,9 +31,10 @@ options::usage() {
 		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
-		-mem     | --memory [value]           : expected picard/gatk memory usage of a bam slice. determines number of slices and thus parallel instances
-		                                        default: 30000 (allows for $MTHREADS instances using $MAXMEMORY MB currently available memory)
+		-mem     | --memory [value]           : expected memory comsumption processing a bam slice. determines number of slices and parallel instances
+		                                        default: $MEMORY (allows for $MTHREADS instances using $MAXMEMORY MB of currently available memory)
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
+		-xmem    | --max-memory [value]       : total amount of allocatable memory. default: $MAXMEMORY MB i.e. currently available memory
 
 		ADVANCED OPTIONS
 		-dev     | --devel                    : prints list of keywords in processing order for advanced pipeline control
@@ -53,56 +54,61 @@ options::usage() {
 		-no-bwa  | --no-bwa                   : disables indexing for BWA when used with -x
 
 		PREPROCESSING OPTIONS
-		-no-qual | --no-qualityanalysis       : disables read quality analysis
-		-no-trim | --no-trimming              : disables quality trimming
+		-no-qual | --no-qualityanalysis       : disables intermediate read quality analyses
+		                                        NOTE: if -no-qual and unless -no-stats option, faster bulk quality analyses will be performed
+		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
-		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first pair. comma seperated (e.g. Illumina universal adapter AGATCGGAAGAGC)
-		-a2      | --adapter2 [string,..]     : adapter sequence(s). second pair. comma seperated (can be the same as -a1. no revere complement required)
-		-cor     | --correction               : enable majority based raw read error correction
-		-rrm     | --rrnafilter               : enable rRNA filter
-		-no-stats| --no-statistics            : disables preprocessing statistics
+		                                        NOTE: clipping includes simple 3' quality trimming anyways
+		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first mate. comma seperated
+		-a2      | --adapter2 [string,..]     : adapter sequence(s). mate pair. comma seperated (can be the same as [-a1]. no revere complement required)
+		-cor     | --correction               : enables majority based raw read error correction
+		-rrm     | --rrnafilter               : enables rRNA filter
+		-no-stats| --no-statistics            : disables preprocessing statistics from read quality analyses
 
 		ALIGNMENT OPTIONS
-		-d       | --distance                 : maximum read alignment edit distance in % - default: 5
-		-i       | --insertsize               : maximum allowed insert for aligning mate pairs - default: 200000
+		-d       | --distance                 : maximum read alignment edit distance in %. default: 5
+		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 200000
 		-split   | --split                    : enables split read mapping and afterwards split alignments by N-cigar strings to call variants from RNA-Seq data
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
 		-no-bwa  | --no-bwa                   : disables mapping by BWA
+		-no-qual | --no-qualityanalysis       : disables intermediate alignment quality analyses
+		                                        NOTE: if -no-qual and unless -no-stats option, faster bulk quality analyses will be performed
 		-no-uniq | --no-uniqify               : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                  : disables sorting alignments
 		-no-addrg| --no-addreadgroup          : disables proper read group modification by Picard
 		-no-rmd  | --no-removeduplicates      : disables removing duplicates
-		-rx      | --regex                    : regex of read name identifier with grouped tile information - default: \S+:(\d+):(\d+):(\d+)\s*.*
+		-rx      | --regex                    : regex of read name identifier with grouped tile information. default: \S+:(\d+):(\d+):(\d+)\s*.*
 		                                        NOTE: necessary for successful optical deduplication. to disable or if unavailable, set to null
 		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
 		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
 		-no-idx  | --no-index                 : disables indexing alignments
-		-no-stats| --no-statistics            : disables mapping statistics
+		-no-stats| --no-statistics            : disables mapping statistics from alignment quality analyses
 
 		PON/GERMLINE OPTIONS
-		-1       | --fq1 [path,..]            : fastq input. single or first pair. comma seperated
-		-2       | --fq2 [path,..]            : fastq input. second pair. comma seperated
+		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
+		-2       | --fq2 [path,..]            : fastq input. mate pair. comma seperated
 		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
-		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls - default: 'SAMPLE'
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
+		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls. default: SAMPLE
 		-no-dbsnp| --no-dbsnp                 : disbales dbSNP based variant filtering
 		-no-pon  | --no-panelofnormals        : switch to germline variant calling and disables custom panel of normals calling
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
 
 		SOMATIC OPTIONS
-		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first pair. comma seperated
-		-n2      | --normalfq2 [path,..]      : normal fastq input. second pair. comma seperated
-		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first pair. comma seperated
-		-t2      | --tumorfq2 [path,..]       : tumor fastq input. second pair. comma seperated
+		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma seperated
+		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma seperated
+		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first mate. comma seperated
+		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma seperated
 		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
 		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
-		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input - optional. default: custom
+		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
 		-no-pon  | --no-panelofnormals        : disbale integration of panel of normals into variant calling
 
 		VARIANT CALLER OPTIONS
+		-no-call | --no-call                  : disables variant calling for preprocessing purposes
 		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller/Mutect2
 		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
 		-no-vs   | --no-varscan               : disables variant calling by VarScan
@@ -141,13 +147,14 @@ options::developer() {
 
 		DEVELOPER OPTIONS
 		md5   : check for md5sums and if necessary trigger genome indexing
-		qual  : quality analysis for input and trim, clip, cor, rrm
+		fqual : quality analysis for input and trim, clip, cor, rrm
 		trim  : trimming
-		clip  : adapter clipping
+		clip  : adapter clipping (& simple trimming)
 		cor   : raw read correction
 		rrm   : rRNA filtering
 		sege  : Segemehl mapping
 		star  : STAR mapping
+		mqual : mapping, uniq, rmd, cmo
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
 		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
@@ -193,6 +200,7 @@ options::checkopt (){
 		-v        | --verbosity) arg=true; VERBOSITY=$2;;
 		-t        | --threads) arg=true; THREADS=$2;;
 		-mem      | --memory) arg=true; MEMORY=$2;;
+		-xmem     | --max-memory) arg=true; MAXMEMORY=$2;;
 
 		-x        | --index) INDEX=true;;
 		-g        | --genome) arg=true; GENOME=$2;;
@@ -242,6 +250,7 @@ options::checkopt (){
 		-no-idx   | --no-index) NOidx=true;;
 		-no-stats | --no-statistics) NOstats=true;;
 
+		-no-call  | --no-call) NOgatk=true; NOfb=true; NObt=true; NOpp=true; NOvs=true; NOvd=true;;
 		-no-gatk  | --no-gatk) NOgatk=true;;
 		-no-fb    | --no-freebayes) NOfb=true;;
 		-no-bt    | --no-bcftools) NObt=true;;
@@ -266,7 +275,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -280,7 +289,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in md5 fqual trim clip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -290,11 +299,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done
