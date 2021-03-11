@@ -54,14 +54,16 @@ options::usage() {
 		-no-bwa  | --no-bwa                   : disables indexing for BWA when used with -x
 
 		PREPROCESSING OPTIONS
-		-no-qual | --no-qualityanalysis       : disables read quality analysis
-		-no-trim | --no-trimming              : disables quality trimming
+		-no-qual | --no-qualityanalysis       : disables intermediate read quality analyses
+		                                        NOTE: if -no-qual and unless -no-stats option, faster bulk quality analyses will be performed
+		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
+		                                        NOTE: clipping includes simple 3' quality trimming anyways
 		-a1      | --adapter1 [string,..]     : adapter sequence(s). single or first mate. comma seperated
 		-a2      | --adapter2 [string,..]     : adapter sequence(s). mate pair. comma seperated (can be the same as [-a1]. no revere complement required)
-		-cor     | --correction               : enable majority based raw read error correction
-		-rrm     | --rrnafilter               : enable rRNA filter
-		-no-stats| --no-statistics            : disables preprocessing statistics
+		-cor     | --correction               : enables majority based raw read error correction
+		-rrm     | --rrnafilter               : enables rRNA filter
+		-no-stats| --no-statistics            : disables preprocessing statistics from read quality analyses
 
 		ALIGNMENT OPTIONS
 		-d       | --distance                 : maximum read alignment edit distance in %. default: 5
@@ -70,6 +72,8 @@ options::usage() {
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
 		-no-bwa  | --no-bwa                   : disables mapping by BWA
+		-no-qual | --no-qualityanalysis       : disables intermediate alignment quality analyses
+		                                        NOTE: if -no-qual and unless -no-stats option, faster bulk quality analyses will be performed
 		-no-uniq | --no-uniqify               : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                  : disables sorting alignments
 		-no-addrg| --no-addreadgroup          : disables proper read group modification by Picard
@@ -81,7 +85,7 @@ options::usage() {
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
 		-no-idx  | --no-index                 : disables indexing alignments
-		-no-stats| --no-statistics            : disables mapping statistics
+		-no-stats| --no-statistics            : disables mapping statistics from alignment quality analyses
 
 		PON/GERMLINE OPTIONS
 		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
@@ -143,13 +147,14 @@ options::developer() {
 
 		DEVELOPER OPTIONS
 		md5   : check for md5sums and if necessary trigger genome indexing
-		qual  : quality analysis for input and trim, clip, cor, rrm
+		fqual : quality analysis for input and trim, clip, cor, rrm
 		trim  : trimming
-		clip  : adapter clipping
+		clip  : adapter clipping (& simple trimming)
 		cor   : raw read correction
 		rrm   : rRNA filtering
 		sege  : Segemehl mapping
 		star  : STAR mapping
+		mqual : mapping, uniq, rmd, cmo
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
 		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
@@ -270,7 +275,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -284,7 +289,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 qual trim clip cor rrm sege star bwa uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in md5 fqual trim clip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -294,11 +299,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in qual trim clip cor rrm sege star bwa uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done
