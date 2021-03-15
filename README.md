@@ -21,8 +21,9 @@ Muvac leverages on bashbone, which is a bash library for workflow and pipeline d
   - knapsack problem based slicing of alignment files for parallel task execution
   - sorting, filtering, unique alignment extraction, removal of optical duplicates
   - read group modification, split N-cigar reads, left-alignment and base quality score recalibration
-- Germline and somatic variant detection from DNA or RNA sequencing experiments plus VCF normalization
-- Tree reconstruction from homozygous sites
+- Variant detection from DNA or RNA sequencing experiments
+  - Integration of multiple solutions for germline and somatic calling
+  - VCF normalization
 
 # License
 
@@ -152,7 +153,7 @@ Afterwards, place the files next to your genome fasta file with equal name plus 
 - genome.fa.pon.vcf.tbi
 - genome.fa.af_only_gnomad.vcf.gz.tbi
 
-Analogously, place a custom dbSNP file next to the genome as genome.fa.vcf. Possible resources are
+Analogously, place a custom dbSNP file next to the genome as genome.fa.vcf. This is automatically done by `dlgenome.sh -s` (see above). To manually download the data, possible resources are
 
 - HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
 - HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/
@@ -179,7 +180,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 -1 <fastq> [-2 <fastq>]
 ```
 
-Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). Sequences can be found in the Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document>) and the resource of Trimmomatic (<https://github.com/timflutre/trimmomatic/tree/master/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration>).
+Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). Sequences can be found in the Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document>) and the resource of Trimmomatic (<https://github.com/usadellab/Trimmomatic/tree/main/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration>).
 
 The following excerpt is independent of the indexing type, i.e. single, unique dual (UD) or combinatorial dual (CD).
 
@@ -187,8 +188,9 @@ Nextera (Transposase Sequence), TruSight, AmpliSeq, stranded total/mRNA Prep, Ri
 
 TruSeq (Universal) Adapter with A prefix due to 3' primer A-tailing : AGATCGGAAGAGC
 
-      - full DNA & RNA - R1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA R2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
-      - full DNA MethC - R1: AGATCGGAAGAGCACACGTCTGAAC R2: AGATCGGAAGAGCGTCGTGTAGGGA
+TruSeq full length DNA & RNA R1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA R2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+TruSeq full length DNA MethC R1: AGATCGGAAGAGCACACGTCTGAAC R2: AGATCGGAAGAGCGTCGTGTAGGGA
 
 TruSeq Small RNA: TGGAATTCTCGGGTGCCAAGG
 
@@ -229,15 +231,7 @@ Perform pre-processing, mapping and post-processing with subsequent germline var
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
--1 <fastq,fastq,...> [-2 <fastq,fastq,...>]
-```
-
-Perform pre-processing, mapping and post-processing with subsequent somatic variant calling with known sites and a panel of normals provided by GATK resources (stored as genome.fa.pon.tar.gz, see additional information section of muvac usage).
-
-```bash
-source <path/of/installation/latest/muvac/activate.sh>
-muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
--n1 <fastq,fastq,...> [-n2 <fastq,fastq,...>] -t1 <fastq,fastq,...> [-t2 <fastq,fastq,...>]
+-1 <fastq,fastq,...> [-2 <fastq,fastq,...>] -no-pon
 ```
 
 Perform generation of a custom panel of normals for subsequent somatic variant calling.
@@ -245,10 +239,26 @@ Perform generation of a custom panel of normals for subsequent somatic variant c
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
--1 <fastq,fastq,...> [-2 <fastq,fastq,...>] -pon
+-1 <fastq,fastq,...> [-2 <fastq,fastq,...>]
 
+```
+
+Perform pre-processing, mapping and post-processing with subsequent somatic variant calling with known sites and a panel of normals e.g. provided by GATK resources.
+
+```bash
+source <path/of/installation/latest/muvac/activate.sh>
+muvac.sh -v 2 -t <threads> -g <fasta> -p <pon> -s <dbsnp> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
+-n1 <fastq,fastq,...> [-n2 <fastq,fastq,...>] -t1 <fastq,fastq,...> [-t2 <fastq,fastq,...>]
+```
+
+### Variant calling from RNA
+
+To enable RNA split read mapping and required post-processing functions, use the `-split` option to call e.g. germline variants.
+
+```bash
+source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> \
--n1 <fastq,fastq,...> [-n2 <fastq,fastq,...>] -t1 <fastq,fastq,...> [-t2 <fastq,fastq,...>] -mypon
+-1 <fastq,fastq,...> [-2 <fastq,fastq,...>] -split -no-pon
 ```
 
 ### Start, redo or resume
@@ -264,7 +274,7 @@ Use comma separated lists to e.g. skip md5 check and quality analysis.
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
-muvac.sh [...] -skip md5,qual
+muvac.sh [...] -skip md5,fqual
 ```
 
 Example how to resume from the segemehl mapping break point after previous data pre-processing.
