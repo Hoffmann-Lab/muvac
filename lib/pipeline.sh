@@ -353,6 +353,19 @@ pipeline::germline() {
 		-t $THREADS \
 		-o $OUTDIR/stats
 
+	pipeline::_slice ${NOreo:=true} ${SKIPreo:=false}
+	alignment::reorder \
+		-S ${NOreo:=true} \
+		-s ${SKIPreo:=false} \
+		-t $THREADS \
+		-m $MEMORY \
+		-M $MAXMEMORY \
+		-g $GENOME \
+		-r mapper \
+		-c slicesinfo \
+		-p $TMPDIR \
+		-o $OUTDIR/mapped
+
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
 		alignment::splitncigar \
@@ -367,19 +380,6 @@ pipeline::germline() {
 			-p $TMPDIR \
 			-o $OUTDIR/mapped
 	}
-
-	pipeline::_slice ${NOreo:=false} ${SKIPreo:=false}
-		alignment::reorder \
-			-S ${NOreo:=false} \
-			-s ${SKIPreo:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-M $MAXMEMORY \
-			-g $GENOME \
-			-r mapper \
-			-c slicesinfo \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
 	alignment::leftalign \
@@ -598,6 +598,19 @@ pipeline::somatic() {
 		-t $THREADS \
 		-o $OUTDIR/stats
 
+	pipeline::_slice ${NOreo:=true} ${SKIPreo:=false}
+	alignment::reorder \
+		-S ${NOreo:=true} \
+		-s ${SKIPreo:=false} \
+		-t $THREADS \
+		-m $MEMORY \
+		-M $MAXMEMORY \
+		-g $GENOME \
+		-r mapper \
+		-c slicesinfo \
+		-p $TMPDIR \
+		-o $OUTDIR/mapped
+
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
 		alignment::splitncigar \
@@ -612,19 +625,6 @@ pipeline::somatic() {
 			-p $TMPDIR \
 			-o $OUTDIR/mapped
 	}
-
-	pipeline::_slice ${NOreo:=false} ${SKIPreo:=false}
-	alignment::reorder \
-		-S ${NOreo:=false} \
-		-s ${SKIPreo:=false} \
-		-t $THREADS \
-		-m $MEMORY \
-		-M $MAXMEMORY \
-		-g $GENOME \
-		-r mapper \
-		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
 	alignment::leftalign \
