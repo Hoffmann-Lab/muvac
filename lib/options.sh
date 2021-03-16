@@ -44,9 +44,12 @@ options::usage() {
 
 		GENOME OPTIONS
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
+		                                        NOTE: if possible, please provide in karyotypic order
 		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
+		                                        NOTE: if possible, please provide in karyotypic order
 		-p       | --pon [path]               : genome panel of normals input for somatic variant calling. default: [-g].pon.vcf.gz
+		                                        NOTE: if possible, please provide in karyotypic order
 		-x       | --index                    : create all requiered genome indices and md5 sums and exit. otherwise create necessary indices on the fly
 		-no-sege | --no-segemehl              : disables indexing for segemehl when used with -x
 		-no-star | --no-star                  : disables indexing for STAR when used with -x. use when indexing is applied on plug-n-play CTAT resource
@@ -81,7 +84,7 @@ options::usage() {
 		-rx      | --regex                    : regex of read name identifier with grouped tile information. default: \S+:(\d+):(\d+):(\d+)\s*.*
 		                                        NOTE: necessary for successful optical deduplication. to disable or if unavailable, set to null
 		-no-cmo  | --no-clipmateoverlaps      : disables clipping of read mate overlaps
-		-no-reo  | --no-reordering            : disables reordering according to genome file by Picard
+		-reo     | --reorder                  : enables reordering according to genome file by Picard
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
 		-no-idx  | --no-index                 : disables indexing alignments
@@ -162,8 +165,8 @@ options::developer() {
 		rmd   : removing duplicates
 		cmo   : clipping mate overlaps
 		stats : proprocessing and mapping statistics
-		nsplit: splitting split-read alignments
 		reo   : bam reordering according to genome
+		nsplit: splitting split-read alignments
 		laln  : left alignment
 		bqsr  : BQSRecalibration
 		idx   : intermediate and final bam indexing
@@ -244,7 +247,7 @@ options::checkopt (){
 		-no-cmo   | --no-clipmateoverlaps) NOcmo=true;;
 		-rgn      | --readgroup-name) arg=true; RGPREFIX=$2;;
 		-no-addrg | --no-addreadgroup) NOaddrg=true;;
-		-no-reo   | --no-reordering) NOreo=true;;
+		-reo      | --reorder) NOreo=false;;
 		-no-laln  | --no-leftalign) NOlaln=true;;
 		-no-bqsr  | --no-qualrecalibration) NObqsr=true;;
 		-no-idx   | --no-index) NOidx=true;;
@@ -275,7 +278,7 @@ options::checkopt (){
 options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -289,7 +292,7 @@ options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 fqual trim clip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in md5 fqual trim clip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -299,11 +302,11 @@ options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s alredy set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats nsplit reo laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in fqual trim clip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done
