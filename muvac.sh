@@ -149,7 +149,6 @@ else
 	NIDX.push $(NMAPPED.idxs)
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
 fi
-[[ ! $FASTQ2 ]] && NOcmo=true
 
 progress::log -v $VERBOSITY -o $LOG
 commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -ai "$LOG"
