@@ -5,28 +5,28 @@ source "$(dirname "$(readlink -e "$0")")/activate.sh" -c true -x cleanup || exit
 
 cleanup() {
 	[[ -e $TMPDIR ]] && {
-		find $TMPDIR -type f -name "cleanup.*" -exec rm -f {} \;
-		find $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \;
+		find -L $TMPDIR -type f -name "cleanup.*" -exec rm -f {} \;
+		find -L $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \;
 	}
 	[[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
 		[[ -e $TMPDIR ]] && {
-			find $TMPDIR -type f -exec rm -f {} \;
-			find $TMPDIR -depth -type d -exec rm -rf {} \;
+			find -L $TMPDIR -type f -exec rm -f {} \;
+			find -L $TMPDIR -depth -type d -exec rm -rf {} \;
 			rm -rf $TMPDIR
 		}
 		[[ -e $OUTDIR ]] && {
 			local b
 			for f in "${FASTQ1[@]}"; do
 				readlink -e "$f" | file -f - | grep -qE '(gzip|bzip)' && b=$(basename $f | rev | cut -d '.' -f 3- | rev) || b=$(basename $f | rev | cut -d '.' -f 2- | rev)
-				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
-				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
-				find $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
+				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
+				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
+				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
 			done
 			for f in "${MAPPED[@]}"; do
 				b=$(basename $f | rev | cut -d '.' -f 2- | rev)
-				find $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
-				find $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
-				find $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
+				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
+				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
+				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
 			done
 		}
 	}
@@ -153,6 +153,13 @@ fi
 progress::log -v $VERBOSITY -o $LOG
 commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -ai "$LOG"
 commander::printinfo "temporary files go to: $HOSTNAME:$TMPDIR" | tee -ia "$LOG"
+commander::printinfo "date: $(date)" | tee -ia "$LOG"
+x=$(ulimit -Hn)
+[[ $((x/100)) -lt $THREADS ]] && {
+	commander::warn "detected a low user limit of open file descriptors (ulimit -Hn : $x) for too many threads ($THREADS)"
+	commander::warn "in case of memory allocation errors, you may decrease the number of threads to $((x/100))." | tee -ia "$LOG"
+	commander::warn "possible memory allocation errors are 'bash: fork: Cannot allocate memory', 'Failed to read from standard input', 'Failed to open -', 'Too many open files'" | tee -ia "$LOG"
+}
 
 if ${INDEX:=false}; then
 	BASHBONE_ERROR="indexing failed"
