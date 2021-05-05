@@ -114,9 +114,9 @@ options::usage() {
 		-no-call | --no-call                  : disables variant calling for preprocessing purposes
 		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller/Mutect2
 		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
+		-no-fb   | --no-freebayes             : disables variant calling by freebayes
 		-no-vs   | --no-varscan               : disables variant calling by VarScan
 		-no-vd   | --no-vardict               : disables variant calling by VarDict
-		-no-fb   | --no-freebayes             : disables variant calling by freebayes
 		-no-pp   | --no-platypus              : disables variant calling by Platypus
 
 
@@ -182,11 +182,6 @@ options::developer() {
 	EOF
 	exit 0
 }
-		# bt    : bcftools
-		# fb    : freebayes
-		# pp    : platypus
-		# vs    : varscan
-		# vd    : vardict
 
 options::checkopt (){
 	local arg=false
