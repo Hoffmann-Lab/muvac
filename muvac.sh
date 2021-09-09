@@ -5,28 +5,28 @@ source "$(dirname "$(readlink -e "$0")")/activate.sh" -c true -x cleanup || exit
 
 cleanup() {
 	[[ -e $TMPDIR ]] && {
-		find -L $TMPDIR -type f -name "cleanup.*" -exec rm -f {} \;
-		find -L $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \;
+		find -L $TMPDIR -type f -name "cleanup.*" -exec rm -f {} \; &> /dev/null || true
+		find -L $TMPDIR -depth -type d -name "cleanup.*" -exec rm -rf {} \; &> /dev/null || true
 	}
 	[[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
 		[[ -e $TMPDIR ]] && {
-			find -L $TMPDIR -type f -exec rm -f {} \;
-			find -L $TMPDIR -depth -type d -exec rm -rf {} \;
+			find -L $TMPDIR -type f -exec rm -f {} \; &> /dev/null || true
+			find -L $TMPDIR -depth -type d -exec rm -rf {} \; &> /dev/null || true
 			rm -rf $TMPDIR
 		}
 		[[ -e $OUTDIR ]] && {
 			local b
 			for f in "${FASTQ1[@]}"; do
 				readlink -e "$f" | file -f - | grep -qE '(gzip|bzip)' && b=$(basename $f | rev | cut -d '.' -f 3- | rev) || b=$(basename $f | rev | cut -d '.' -f 2- | rev)
-				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
-				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
-				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
+				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \; &> /dev/null || true
+				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \; &> /dev/null || true
+				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \; &> /dev/null || true
 			done
 			for f in "${MAPPED[@]}"; do
 				b=$(basename $f | rev | cut -d '.' -f 2- | rev)
-				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \;
-				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \;
-				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \;
+				find -L $OUTDIR -depth -type d -name "$b*._STAR*" -exec rm -rf {} \; &> /dev/null || true
+				find -L $OUTDIR -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .sorted.bam).bam' \; &> /dev/null || true
+				find -L $OUTDIR -type f -name "$b*.*.gz" -exec bash -c '[[ -s {} ]] && rm -f $(dirname {})/$(basename {} .gz)' \; &> /dev/null || true
 			done
 		}
 	}
