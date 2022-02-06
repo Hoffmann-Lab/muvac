@@ -23,7 +23,7 @@ options::usage() {
 		                                        2 - get full output
 		-o       | --out [path]               : output directory. default: $OUTDIR
 		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
-		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/rippchen.XXXXXXXXXX
+		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
 		-xmem    | --max-memory [value]       : total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
