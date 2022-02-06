@@ -19,7 +19,7 @@ while getopts ':i:c:x:' arg; do
 done
 
 source "$insdir/bashbone/activate.sh" -i "$toolsdir" -c ${activate:-false} -x "$exitfun" || exit 1
-export PATH="$(dirname "$(readlink -e "${BASH_SOURCE[0]}")"):$PATH"
+export PATH="$insdir:$PATH"
 
 _IFS=$IFS
 IFS=$'\n'
