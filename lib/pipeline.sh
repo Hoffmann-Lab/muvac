@@ -7,9 +7,9 @@ pipeline::index(){
 		-S ${NOsege:=false} \
 		-s true \
 		-t $THREADS \
-		-g $GENOME \
-		-x $GENOME.segemehl.idx \
-		-o $TMPDIR \
+		-g "$GENOME" \
+		-x "$GENOME.segemehl.idx" \
+		-o "$TMPDIR" \
 		-r NA1 \
 		-1 NA2
 	unset NA1 NA2
@@ -17,11 +17,11 @@ pipeline::index(){
 		-S ${NOstar:=false} \
 		-s true \
 		-t $THREADS \
-		-g $GENOME \
-		-x $GENOME.star.idx \
-		-f $GTF \
-		-o $TMPDIR \
-		-p $TMPDIR \
+		-g "$GENOME" \
+		-x "$GENOME.star.idx" \
+		-f "$GTF" \
+		-o "$TMPDIR" \
+		-p "$TMPDIR" \
 		-r NA1 \
 		-1 NA2
 	unset NA1 NA2
@@ -29,15 +29,15 @@ pipeline::index(){
 		-S ${NObwa:=false} \
 		-s true \
 		-t $THREADS \
-		-g $GENOME \
-		-x $GENOME.bwa.idx/bwa \
-		-o $TMPDIR \
+		-g "$GENOME" \
+		-x "$GENOME.bwa.idx/bwa" \
+		-o "$TMPDIR" \
 		-r NA1 \
 		-1 NA2
 	genome::mkdict \
 		-t $THREADS \
-		-i $GENOME \
-		-p $TMPDIR
+		-i "$GENOME" \
+		-p "$TMPDIR"
 	return 0
 }
 
@@ -50,7 +50,7 @@ pipeline::_slice(){
 		-M $MAXMEMORY \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR || return 1
+		-p "$TMPDIR" || return 1
 	! $1 && ! $2 && SLICED=true
 	! $1 && ${SKIPslice:-false} && SLICED=true
 
@@ -66,8 +66,8 @@ pipeline::_preprocess(){
 			-S ${NOqual:=false} \
 			-s ${SKIPfqual:=false} \
 			-t $THREADS \
-			-o $OUTDIR/qualities/raw \
-			-p $TMPDIR \
+			-o "$OUTDIR/qualities/raw" \
+			-p "$TMPDIR" \
 			-1 FASTQ1 \
 			-2 FASTQ2
 
@@ -76,8 +76,8 @@ pipeline::_preprocess(){
 				-S ${NOtrim:=false} \
 				-s ${SKIPtrim:=false} \
 				-t $THREADS \
-				-o $OUTDIR/trimmed \
-				-p $TMPDIR \
+				-o "$OUTDIR/trimmed" \
+				-p "$TMPDIR" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/trimmed" -1 FASTQ1 -2 FASTQ2
@@ -85,8 +85,8 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
-				-o $OUTDIR/qualities/trimmed \
-				-p $TMPDIR \
+				-o "$OUTDIR/qualities/trimmed" \
+				-p "$TMPDIR" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 		}
@@ -96,7 +96,7 @@ pipeline::_preprocess(){
 				-S ${NOclip:=false} \
 				-s ${SKIPclip:=false} \
 				-t $THREADS \
-				-o $OUTDIR/polyntclipped \
+				-o "$OUTDIR/polyntclipped" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/polyntclipped" -1 FASTQ1 -2 FASTQ2
@@ -104,8 +104,8 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
-				-o $OUTDIR/qualities/polyntclipped \
-				-p $TMPDIR \
+				-o "$OUTDIR/qualities/polyntclipped" \
+				-p "$TMPDIR" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 		}
@@ -118,7 +118,7 @@ pipeline::_preprocess(){
 					-a ADAPTER1 \
 					-A ADAPTER2 \
 					-t $THREADS \
-					-o $OUTDIR/adapterclipped \
+					-o "$OUTDIR/adapterclipped" \
 					-1 FASTQ1 \
 					-2 FASTQ2
 				preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/adapterclipped" -1 FASTQ1 -2 FASTQ2
@@ -126,8 +126,8 @@ pipeline::_preprocess(){
 					-S ${NOqual:=false} \
 					-s ${SKIPfqual:=false} \
 					-t $THREADS \
-					-o $OUTDIR/qualities/adapterclipped \
-					-p $TMPDIR \
+					-o "$OUTDIR/qualities/adapterclipped" \
+					-p "$TMPDIR" \
 					-1 FASTQ1 \
 					-2 FASTQ2
 			}
@@ -137,8 +137,8 @@ pipeline::_preprocess(){
 			-S ${NOcor:=true} \
 			-s ${SKIPcor:=false} \
 			-t $THREADS \
-			-o $OUTDIR/corrected \
-			-p $TMPDIR \
+			-o "$OUTDIR/corrected" \
+			-p "$TMPDIR" \
 			-1 FASTQ1 \
 			-2 FASTQ2
 
@@ -147,8 +147,8 @@ pipeline::_preprocess(){
 				-S ${NOrrm:=true} \
 				-s ${SKIPrrm:=false} \
 				-t $THREADS \
-				-o $OUTDIR/rrnafiltered \
-				-p $TMPDIR \
+				-o "$OUTDIR/rrnafiltered" \
+				-p "$TMPDIR" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/rrnafiltered" -1 FASTQ1 -2 FASTQ2
@@ -156,8 +156,8 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
-				-o $OUTDIR/qualities/rrnafiltered \
-				-p $TMPDIR \
+				-o "$OUTDIR/qualities/rrnafiltered" \
+				-p "$TMPDIR" \
 				-1 FASTQ1 \
 				-2 FASTQ2
 		}
@@ -167,8 +167,8 @@ pipeline::_preprocess(){
 			-s ${SKIPstats:=false} \
 			-t $THREADS \
 			-i qualdirs \
-			-o $OUTDIR/stats \
-			-p $TMPDIR \
+			-o "$OUTDIR/stats" \
+			-p "$TMPDIR" \
 			-1 FASTQ1 \
 			-2 FASTQ2
 	fi
@@ -185,13 +185,13 @@ pipeline::_mapping(){
 			-5 ${SKIPmd5:=false} \
 			-1 FASTQ1 \
 			-2 FASTQ2 \
-			-o $OUTDIR/mapped \
+			-o "$OUTDIR/mapped" \
 			-t $THREADS \
 			-a $((100-DISTANCE)) \
 			-i ${INSERTSIZE:=200000} \
 			-n ${NOsplitreads:=true} \
-			-g $GENOME \
-			-x $GENOME.segemehl.idx \
+			-g "$GENOME" \
+			-x "$GENOME.segemehl.idx" \
 			-r mapper
 
 		alignment::star \
@@ -200,15 +200,15 @@ pipeline::_mapping(){
 			-5 ${SKIPmd5:=false} \
 			-1 FASTQ1 \
 			-2 FASTQ2 \
-			-o $OUTDIR/mapped \
-			-p $TMPDIR \
+			-o "$OUTDIR/mapped" \
+			-p "$TMPDIR" \
 			-t $THREADS \
 			-a $((100-DISTANCE)) \
 			-i ${INSERTSIZE:=200000} \
 			-n ${NOsplitreads:=true} \
-			-g $GENOME \
+			-g "$GENOME" \
 			-f "$GTF" \
-			-x $GENOME.star.idx \
+			-x "$GENOME.star.idx" \
 			-r mapper
 
 		! ${NOsplitreads:=true} || alignment::bwa \
@@ -217,12 +217,12 @@ pipeline::_mapping(){
 			-5 ${SKIPmd5:=false} \
 			-1 FASTQ1 \
 			-2 FASTQ2 \
-			-o $OUTDIR/mapped \
+			-o "$OUTDIR/mapped" \
 			-t $THREADS \
 			-a $((100-DISTANCE)) \
 			-f true \
-			-g $GENOME \
-			-x $GENOME.bwa.idx/bwa \
+			-g "$GENOME" \
+			-x "$GENOME.bwa.idx/bwa" \
 			-r mapper
 	else
 		declare -g -a ${MAPNAME:=custom}
@@ -245,8 +245,8 @@ pipeline::_mapping(){
 		-s ${SKIPuniq:=false} \
 		-j uniqify \
 		-t $THREADS \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
 		-r mapper
 	! ${NOuniq:=false} && ${NOsort:=false} && {
 		alignment::add4stats -r mapper
@@ -261,9 +261,9 @@ pipeline::_mapping(){
 		-S ${NOsort:=false} \
 		-s ${SKIPsort:=false} \
 		-j sort \
-		-t $THREADS \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped \
+		-t "$THREADS" \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
 		-r mapper
 	(${NOuniq:=false} && ! ${NOsort:=false}) || (! ${NOuniq:=false} && ! ${NOsort:=false}) && {
 		alignment::add4stats -r mapper
@@ -289,8 +289,8 @@ pipeline::germline() {
 		-S ${NOdict:=false} \
 		-s ${SKIPdict:=false} \
 		-5 ${SKIPmd5:=false} \
-		-i $GENOME \
-		-p $TMPDIR \
+		-i "$GENOME" \
+		-p "$TMPDIR" \
 		-t $THREADS
 
 	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
@@ -303,8 +303,8 @@ pipeline::germline() {
 		-n ${RGPREFIX:='SAMPLE'} \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -317,8 +317,8 @@ pipeline::germline() {
 			-r mapper \
 			-c slicesinfo \
 			-x "$REGEX" \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped"
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -337,7 +337,7 @@ pipeline::germline() {
 			-M $MAXMEMORY \
 			-r mapper \
 			-c slicesinfo \
-			-o $OUTDIR/mapped
+			-o "$OUTDIR/mapped"
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -351,7 +351,7 @@ pipeline::germline() {
 		-s ${SKIPstats:=false} \
 		-r mapper \
 		-t $THREADS \
-		-o $OUTDIR/stats
+		-o "$OUTDIR/stats"
 
 	pipeline::_slice ${NOreo:=true} ${SKIPreo:=false}
 	alignment::reorder \
@@ -360,11 +360,11 @@ pipeline::germline() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
+		-g "$GENOME" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -374,11 +374,11 @@ pipeline::germline() {
 			-t $THREADS \
 			-m $MEMORY \
 			-M $MAXMEMORY \
-			-g $GENOME \
+			-g "$GENOME" \
 			-r mapper \
 			-c slicesinfo \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped"
 	}
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
@@ -388,14 +388,14 @@ pipeline::germline() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
+		-g "$GENOME" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -i $DBSNP
+		variants::vcfzip -t $THREADS -i "$DBSNP"
 	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
@@ -406,44 +406,44 @@ pipeline::germline() {
 		-m $MEMORY \
 		-M $MAXMEMORY \
 		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	alignment::postprocess \
 		-S ${NOidx:=false} \
 		-s ${SKIPidx:=false} \
 		-j index \
 		-t $THREADS \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
 		-r mapper
 
-	${NOpon:=false} || {
-		pipeline::_slice ${NOpon:=false} ${SKIPpon:=false}
+	${NOpon:=true} || {
+		pipeline::_slice ${NOpon:=true} ${SKIPpon:=false}
 		variants::panelofnormals \
-			-S ${NOpon:=false} \
+			-S ${NOpon:=true} \
 			-s ${SKIPpon:=false} \
 			-t $THREADS \
-			-g $GENOME \
+			-g "$GENOME" \
 			-m $MEMORY \
 			-M $MAXMEMORY \
 			-r mapper \
 			-c slicesinfo \
-			-p $TMPDIR \
-			-o $OUTDIR/pon
+			-p "$TMPDIR" \
+			-o "$OUTDIR/pon"
 
 		variants::makepondb \
 			-S ${NOpondb:=false} \
 			-s ${SKIPpondb:=false} \
 			-t $THREADS \
-			-g $GENOME \
+			-g "$GENOME" \
 			-M $MAXMEMORY \
 			-r mapper \
-			-p $TMPDIR \
-			-o $OUTDIR/pon
+			-p "$TMPDIR" \
+			-o "$OUTDIR/pon"
 
 		return 0
 	}
@@ -455,68 +455,68 @@ pipeline::germline() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-e ${NOsplitreads:=true} \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::bcftools \
 		-S ${NObt:=false} \
 		-s ${SKIPbt:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::freebayes \
 		-S ${NOfb:=false} \
 		-s ${SKIPfb:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::varscan \
 		-S ${NOvs:=false} \
 		-s ${SKIPvs:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::vardict \
 		-S ${NOvd:=false} \
 		-s ${SKIPvd:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::platypus \
 		-S ${NOpp:=false} \
 		-s ${SKIPpp:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	return 0
 }
@@ -533,8 +533,8 @@ pipeline::somatic() {
 		-S ${NOdict:=false} \
 		-s ${SKIPdict:=false} \
 		-5 ${SKIPmd5:=false} \
-		-i $GENOME \
-		-p $TMPDIR \
+		-i "$GENOME" \
+		-p "$TMPDIR" \
 		-t $THREADS
 
 	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
@@ -548,8 +548,8 @@ pipeline::somatic() {
 		-1 NIDX \
 		-2 TIDX \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -562,8 +562,8 @@ pipeline::somatic() {
 			-r mapper \
 			-c slicesinfo \
 			-x "$REGEX" \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped"
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -582,7 +582,7 @@ pipeline::somatic() {
 			-M $MAXMEMORY \
 			-r mapper \
 			-c slicesinfo \
-			-o $OUTDIR/mapped
+			-o "$OUTDIR/mapped"
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -596,7 +596,7 @@ pipeline::somatic() {
 		-s ${SKIPstats:=false} \
 		-r mapper \
 		-t $THREADS \
-		-o $OUTDIR/stats
+		-o "$OUTDIR/stats"
 
 	pipeline::_slice ${NOreo:=true} ${SKIPreo:=false}
 	alignment::reorder \
@@ -605,11 +605,11 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
+		-g "$GENOME" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -619,11 +619,11 @@ pipeline::somatic() {
 			-t $THREADS \
 			-m $MEMORY \
 			-M $MAXMEMORY \
-			-g $GENOME \
+			-g "$GENOME" \
 			-r mapper \
 			-c slicesinfo \
-			-p $TMPDIR \
-			-o $OUTDIR/mapped
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped"
 	}
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
@@ -633,14 +633,14 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
+		-g "$GENOME" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -i $DBSNP
+		variants::vcfzip -t $THREADS -i "$DBSNP"
 	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
@@ -650,20 +650,20 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
+		-g "$GENOME" \
 		-d "$DBSNP" \
 		-r mapper \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped"
 
 	alignment::postprocess \
 		-S ${NOidx:=false} \
 		-s ${SKIPidx:=false} \
 		-j index \
 		-t $THREADS \
-		-p $TMPDIR \
-		-o $OUTDIR/mapped \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
 		-r mapper
 
 	pipeline::_slice ${NOgatk:=false} ${SKIPgatk:=false}
@@ -673,80 +673,80 @@ pipeline::somatic() {
 		-t $THREADS \
 		-m $MEMORY \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-n "$(${NOpon:-false} || echo $PONDB)" \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-n "$(${NOpon:-false} || echo "$PONDB")" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
 		-c slicesinfo \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::bcftools \
 		-S ${NObt:=false} \
 		-s ${SKIPbt:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::freebayes \
 		-S ${NOfb:=false} \
 		-s ${SKIPfb:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::varscan \
 		-S ${NOvs:=false} \
 		-s ${SKIPvs:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::vardict \
 		-S ${NOvd:=false} \
 		-s ${SKIPvd:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	variants::platypus \
 		-S ${NOpp:=false} \
 		-s ${SKIPpp:=false} \
 		-t $THREADS \
 		-M $MAXMEMORY \
-		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo $DBSNP)" \
+		-g "$GENOME" \
+		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
-		-p $TMPDIR \
-		-o $OUTDIR/variants
+		-p "$TMPDIR" \
+		-o "$OUTDIR/variants"
 
 	return 0
 }
