@@ -149,7 +149,7 @@ To obtain panel of normals, common somatic variants and population variants with
 
 Afterwards, place the files next to your genome fasta file with equal name plus extension suffix as shown below.
 
-- genome.fa.somatic_common.vcf.gz.tbi
+- genome.fa.small_common.vcf.gz.tbi
 - genome.fa.pon.vcf.tbi
 - genome.fa.af_only_gnomad.vcf.gz.tbi
 
@@ -180,7 +180,7 @@ muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <
 -1 <fastq> [-2 <fastq>]
 ```
 
-Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). Sequences can be found in the Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document>) and the resource of Trimmomatic (<https://github.com/usadellab/Trimmomatic/tree/main/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration>).
+Data pre-processing with Illumina universal adapter removal, mapping by segemehl and STAR and alignment post-processing (i.e. unique read extraction, sorting, indexing). Sequences can be found in the Illumina Adapter Sequences Document (<https://www.illumina.com/search.html?q=Illumina Adapter Sequences Document>) or Illumina Adapter Sequences HTML (<https://support-docs.illumina.com/SHARE/adapter-sequences.htm>) and the resource of Trimmomatic (<https://github.com/usadellab/Trimmomatic/tree/main/adapters>), FastQC respectively (<https://github.com/s-andrews/FastQC/blob/master/Configuration>).
 
 The following excerpt is independent of the indexing type, i.e. single, unique dual (UD) or combinatorial dual (CD).
 
@@ -316,7 +316,7 @@ muvac.sh [...] -redo bqsr,idx,hc
 | Trimmomatic   | <http://www.usadellab.org/cms/?page=trimmomatic>             | 10.1093/bioinformatics/btu170 |
 | VarDict       | <https://github.com/AstraZeneca-NGS/VarDict>                 | 10.1093/nar/gkw227 |
 | VarScan       | <http://dkoboldt.github.io/varscan>                          | 10.1101/gr.129684.111 |
-| vcflib        | <https://github.com/vcflib/vcflib>                           | NA |
+| vcflib        | <https://github.com/vcflib/vcflib>                           | 10.1101/2021.05.21.445151 |
 | Vt            | <https://genome.sph.umich.edu/wiki/Vt>                       | 10.1093/bioinformatics/btv112 |
 
 ## In preparation
