@@ -8,11 +8,15 @@ else
 fi
 
 cleanup() {
+	[[ -e "$LOG" ]] && {
+		commander::printinfo "date: $(date)" | tee -ia "$LOG"
+		[[ $1 -eq 0 ]] && commander::printinfo "success" | tee -ia "$LOG" || commander::printinfo "failed" | tee -ia "$LOG"
+	}
 	[[ -e "$TMPDIR" ]] && {
 		find -L "$TMPDIR" -type f -name "cleanup.*" -exec rm -f "{}" \; &> /dev/null || true
 		find -L "$TMPDIR" -depth -type d -name "cleanup.*" -exec rm -rf "{}" \; &> /dev/null || true
 	}
-	[[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
+	${FORCECLEANUP:=false} || [[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
 		[[ -e "$TMPDIR" ]] && {
 			find -L "$TMPDIR" -type f -exec rm -f "{}" \; &> /dev/null || true
 			find -L "$TMPDIR" -depth -type d -exec rm -rf "{}" \; &> /dev/null || true
@@ -115,11 +119,6 @@ if [[ $DBSNP ]]; then
 	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
 	readlink -e "$DBSNP" &> /dev/null
 else
-	readlink -e "$GENOME.vcf" | file -f - | grep -qF ASCII && {
-		DBSNP="$GENOME.vcf"
-	} || {
-		[[ -e "$GENOME.vcf.gz" && -e "$GENOME.vcf.gz.tbi" ]] && DBSNP="$GENOME.vcf.gz"
-	}
 	if [[ ! $DBSNP ]]; then
 		commander::warn "dbSNP file missing. proceeding without dbSNP file"
 		NOdbsnp=true
@@ -130,31 +129,31 @@ if [[ $PONDB ]]; then
 	BASHBONE_ERROR="pon file does not exists $PONDB"
 	readlink -e "$PONDB" &> /dev/null
 else
-	readlink -e "$GENOME.pon.vcf" | file -f - | grep -qF ASCII && {
-		PONDB="$GENOME.pon.vcf"
-	} || {
-		[[ -e "$GENOME.pon.vcf.gz" && -e "$GENOME.pon.vcf.gz.tbi" ]] && PONDB="$GENOME.pon.vcf.gz"
-	}
 	if [[ ! $PONDB ]]; then
 		commander::warn "pon file missing. proceeding without pon file"
 		NOpon=true
 	fi
 fi
 
-declare -a FASTQ1 FASTQ2 MAPPED NIDX TIDX
-helper::addmemberfunctions -v FASTQ1 -v FASTQ2 -v MAPPED -v NIDX -v TIDX
-helper::addmemberfunctions -v NFASTQ1 -v NFASTQ2 -v NMAPPED
-helper::addmemberfunctions -v TFASTQ1 -v TFASTQ2 -v TMAPPED
+declare -a FASTQ1 FASTQ2 FASTQ3 MAPPED NIDX TIDX
+helper::addmemberfunctions -v FASTQ1 -v FASTQ2 -v FASTQ3 -v MAPPED -v NIDX -v TIDX
+helper::addmemberfunctions -v NFASTQ1 -v NFASTQ2 -v NFASTQ3 -v NMAPPED
+helper::addmemberfunctions -v TFASTQ1 -v TFASTQ2 -v TFASTQ3 -v TMAPPED
 
 if [[ $NFASTQ1 ]]; then
 	FASTQ1.join NFASTQ1 TFASTQ1
 	FASTQ2.join NFASTQ2 TFASTQ2
+	FASTQ3.join NFASTQ3 TFASTQ3
 	NIDX.push $(NFASTQ1.idxs)
 	TIDX.push $(seq $(NFASTQ1.length) $(($(NFASTQ1.length)+$(TFASTQ1.length)-1)))
 else
 	MAPPED.join NMAPPED TMAPPED
 	NIDX.push $(NMAPPED.idxs)
 	TIDX.push $(seq $(NMAPPED.length) $(($(NMAPPED.length)+$(TMAPPED.length)-1)))
+fi
+
+if [[ $FASTQ3 ]]; then
+	NOrmd=false
 fi
 
 commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -i "$LOG"
@@ -191,5 +190,4 @@ ${Smd5:=false} || {
 	}
 }
 
-commander::printinfo "success" | tee -ia "$LOG"
 exit 0

@@ -4,8 +4,8 @@
 options::usage() {
 	commander::print {COMMANDER[0]}<<- EOF
 		DESCRIPTION
-		MUVAC is an ultra fast germline and somatic variant calling pipeline for model and non-model organisms.
-		It implements GATK best practices in an optimized, parallelized fashion.
+		MUVAC is a multiple, universal germline and somatic variant caller pipeline.
+		It implements GATK best practices and other variant callers in an optimized, parallelized fashion.
 
 
 		VERSION
@@ -25,6 +25,7 @@ options::usage() {
 		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
 		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
+		-rr      | --remove-remove            : remove temporary and unnecessary files termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
 		-xmem    | --max-memory [value]       : total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
 		-mem     | --memory [value]           : allocatable memory per instance of memory greedy tools in MB. defines internal number of parallel instances
@@ -37,8 +38,8 @@ options::usage() {
 
 		INDEXING OPTIONS
 		-x       | --index                    : triggers creation of all requiered genome and annotation indices plus md5 sums
-		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed (see dlgenome.sh)
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf (see dlgenome.sh)
+		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
+		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-no-sege | --no-segemehl              : disables indexing for segemehl
 		-no-star | --no-star                  : disables indexing for STAR. use this option for indexing of plug-n-play CTAT resource
 		                                        NOTE: md5 sum of CTAT [-g].star.idx/SA file needs to be manually added to [-g].md5.sh file afterwards
@@ -48,13 +49,14 @@ options::usage() {
 		GERMLINE OPTIONS
 		-do-pon  | --do-panelofnormals        : triggers panel of normals variant calling
 		                                        NOTE: implies -no-call except for Mutect2
-		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed (see dlgenome.sh)
+		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf (see dlgenome.sh)
+		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
 		                                        NOTE: please provide in karyotypic order
 		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
 		-2       | --fq2 [path,..]            : fastq input. mate pair. comma seperated
+		-3       | --fq3 [path,..]            : fastq input. UMI sequences. comma seperated
 		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
 		                                      : NOTE: clipping includes simple 3' quality trimming anyways
@@ -86,8 +88,7 @@ options::usage() {
 		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses
 		                                        NOTE: given -no-qual and unless -no-stats option, intermediate per file analyses replaced by bulk analysis
 		-no-stats| --no-statistics            : disables statistics from read and alignment quality analyses
-		-no-dbsnp| --no-dbsnp                 : disbales variant calling with respect to dbSNP (HaplotypeCaller) and dbSNP based variant filtering
-		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from pon variants
+		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from panel of normals variant calling
 		-no-call | --no-call                  : disables variant calling and downstream analyses
 		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller (Mutect2 in case of -do-pon)
 		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
@@ -98,17 +99,19 @@ options::usage() {
 
 
 		SOMATIC OPTIONS
-		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed (see dlgenome.sh)
+		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf (see dlgenome.sh)
-		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
+		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
+		-s       | --snp [path]               : genome dbSNP input
 		                                        NOTE: please provide in karyotypic order
-		-p       | --pon [path]               : genome panel of normals input for somatic variant calling. default: [-g].pon.vcf.gz
+		-p       | --pon [path]               : genome panel of normals input
 		                                        NOTE: please provide in karyotypic order
 		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma seperated
 		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma seperated
+		-n3      | --normalfq3 [path,..]      : normal fastq input. UMI sequences. comma seperated
 		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first mate. comma seperated
 		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma seperated
+		-t3      | --tumorfq3 [path,..]       : tumor fastq input. UMI sequences. comma seperated
 		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
 		                                      : NOTE: clipping includes simple 3' quality trimming anyways
@@ -141,8 +144,6 @@ options::usage() {
 		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses
 		                                        NOTE: given -no-qual and unless -no-stats option, intermediate per file analyses replaced by bulk analysis
 		-no-stats| --no-statistics            : disables statistics from read and alignment quality analyses
-		-no-dbsnp| --no-dbsnp                 : disbales dbSNP based variant filtering
-		-no-pon  | --no-panelofnormals        : disbales variant calling with respect to panel of normals
 		-no-call | --no-call                  : disables variant calling and downstream analyses
 		-no-gatk | --no-gatk                  : disables variant calling by HaplotypeCaller/Mutect2
 		-no-bt   | --no-bcftools              : disables variant calling by BCFtools
@@ -152,25 +153,35 @@ options::usage() {
 		-no-pp   | --no-platypus              : disables variant calling by Platypus
 
 
+		ADDITIONAL INFORMATION
+		Chromosome order for all input files (genome, annotation, dbsnp, pon, gnomad, ..) must be identical.
+	    If possible, pleas provide them in karyotypic order and following naming schema: chrM,chr1,chr2,..,chrX,chrY
+
+		To obtain comprehensive panel of normals, small common and full gnomAD/Exac population variants with allele frequencies visit
+		https://gatk.broadinstitute.org/hc/en-us/articles/360035890811
+		-> for hg38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
+		-> for hg19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
+		After download, place the gnomAD/Exac vcf and tbi index files next to your genome fasta file.
+	    Rename gnomad/exac according to your genome fasta file and add the following suffixes
+		<genome.fa>.small_common.vcf.gz
+	    <genome.fa>.small_common.vcf.gz.tbi
+		<genome.fa>.af_only_gnomad.vcf.gz
+	    <genome.fa>.af_only_gnomad.vcf.gz.tbi
+
+		To obtain dbSNP common variants vcf and tbi index along with a matching genome and annotation use
+	    either the supplied dlgenome.sh script
+	    or visit
+		https://ftp.ncbi.nlm.nih.gov/snp/organisms
+		-> for hg38: https://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF
+		or download 1000genomes common variants, dbSNP by extraction from chromosomal vcf files respectively via
+	    http://ftp.ensembl.org/pub/current_variation/vcf
+		-> for hg38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens
+		-> for hg19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens
+
+
 		REFERENCES
 		(c) Konstantin Riege
 		konstantin.riege{a}leibniz-fli{.}de
-
-		ADDITIONAL INFORMATION
-		Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..chr22,chrX,chrY
-		This requierement needs to be fulfilled in all input VCF files.
-
-		To obtain comprehensive panel of normals, common somatic variants and population variants with allele frequencies visit
-		HG38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
-		HG19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
-		After download, put the files next to your genome fasta file with equal name plus extension suffix as shown
-		genome.fa.small_common.vcf.gz, genome.fa.small_common.vcf.gz.tbi
-		genome.fa.pon.vcf.gz, genome.fa.pon.vcf.tbi
-		genome.fa.af_only_gnomad.vcf.gz, genome.fa.af_only_gnomad.vcf.gz.tbi
-
-		Analogously, obtain dbSNP i.e. chromosomal vcf files, concatenate and put them next to your genome fasta as genome.fa.vcf.gz
-		HG38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens/
-		HG19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens/
 	EOF
 	exit 1
 }
@@ -192,7 +203,7 @@ options::developer() {
 		mqual : mapping, uniq, rmd, cmo
 		uniq  : extraction of properly paired and uniquely mapped reads
 		sort  : sorting and indexing of sam/bam files
-		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path]
+		slice : better dont touch! slicing of bams for parallelization, needs -prevtmp | --previoustmp [path to rippchen.XXXXXXXXXX]
 		rg    : read group modification
 		rmd   : removing duplicates
 		cmo   : clipping mate overlaps
@@ -230,6 +241,7 @@ options::checkopt (){
 
 		-tmp      | --tmp) arg=true; TMPDIR="$2";;
 		-r        | --remove) CLEANUP=true;;
+		-rr       | --remove-remove) FORCECLEANUP=true;;
 		-v        | --verbosity) arg=true; VERBOSITY=$2;;
 		-t        | --threads) arg=true; THREADS=$2;;
 		-mem      | --memory) arg=true; MEMORY=$2;;
@@ -243,15 +255,15 @@ options::checkopt (){
 
 		-s        | --snp) arg=true; DBSNP="$2";;
 		-p        | --pon) arg=true; PONDB="$2";;
-		-no-dbsnp | --no-dbsnp) NOdbsnp=true;;
 		-do-pon   | --do-panelofnormals) NOpon=false; NOfb=true; NObt=true; NOpp=true; NOvs=true; NOvd=true;;
-		-no-pon   | --no-panelofnormals) NOpon=true;;
 		-no-pondb | --no-pondatabase) NOpondb=true;;
 
 		-1        | --fq1 | -n1 | --normalfq1) arg=true; mapfile -t -d ',' NFASTQ1 < <(printf '%s' "$2");;
 		-2        | --fq2 | -n2 | --normalfq2) arg=true; mapfile -t -d ',' NFASTQ2 < <(printf '%s' "$2");;
+		-3        | --fq3 | -n3 | --normalfq3) arg=true; mapfile -t -d ',' NFASTQ3 < <(printf '%s' "$2");;
 		-t1       | --tumorfq1) arg=true; mapfile -t -d ',' TFASTQ1 < <(printf '%s' "$2");;
 		-t2       | --tumorfq2) arg=true; mapfile -t -d ',' TFASTQ2 < <(printf '%s' "$2");;
+		-t3       | --tumorfq3) arg=true; mapfile -t -d ',' TFASTQ3 < <(printf '%s' "$2");;
 
 		-a1       | --adapter1) arg=true; mapfile -t -d ',' ADAPTER1 < <(printf '%s' "$2");;
 		-a2       | --adapter2) arg=true; mapfile -t -d ',' ADAPTER2 < <(printf '%s' "$2");;
