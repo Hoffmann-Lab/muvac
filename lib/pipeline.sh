@@ -10,6 +10,7 @@ pipeline::index(){
 		-g "$GENOME" \
 		-x "$GENOME.segemehl.idx" \
 		-o "$TMPDIR" \
+		-F \
 		-r NA1 \
 		-1 NA2
 	unset NA1 NA2
@@ -22,6 +23,7 @@ pipeline::index(){
 		-f "$GTF" \
 		-o "$TMPDIR" \
 		-p "$TMPDIR" \
+		-F \
 		-r NA1 \
 		-1 NA2
 	unset NA1 NA2
@@ -32,9 +34,11 @@ pipeline::index(){
 		-g "$GENOME" \
 		-x "$GENOME.bwa.idx/bwa" \
 		-o "$TMPDIR" \
+		-F \
 		-r NA1 \
 		-1 NA2
 	genome::mkdict \
+		-F \
 		-t $THREADS \
 		-i "$GENOME" \
 		-p "$TMPDIR"
@@ -315,6 +319,7 @@ pipeline::germline() {
 			-m $MEMORY \
 			-M $MAXMEMORY \
 			-r mapper \
+			-3 FASTQ3 \
 			-c slicesinfo \
 			-x "$REGEX" \
 			-p "$TMPDIR" \
@@ -394,7 +399,7 @@ pipeline::germline() {
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
 
-	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
+	[[ $DBSNP ]] && {
 		variants::vcfzip -t $THREADS -i "$DBSNP"
 	}
 
@@ -406,7 +411,7 @@ pipeline::germline() {
 		-m $MEMORY \
 		-M $MAXMEMORY \
 		-g $GENOME \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-c slicesinfo \
 		-p "$TMPDIR" \
@@ -456,7 +461,7 @@ pipeline::germline() {
 		-m $MEMORY \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-e ${NOsplitreads:=true} \
 		-c slicesinfo \
@@ -469,7 +474,7 @@ pipeline::germline() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/variants"
@@ -480,7 +485,7 @@ pipeline::germline() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/variants"
@@ -491,7 +496,7 @@ pipeline::germline() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/variants"
@@ -502,7 +507,7 @@ pipeline::germline() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/variants"
@@ -513,7 +518,7 @@ pipeline::germline() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/variants"
@@ -560,6 +565,7 @@ pipeline::somatic() {
 			-m $MEMORY \
 			-M $MAXMEMORY \
 			-r mapper \
+			-r FASTQ3 \
 			-c slicesinfo \
 			-x "$REGEX" \
 			-p "$TMPDIR" \
@@ -639,7 +645,7 @@ pipeline::somatic() {
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
 
-	! ${NOdbsnp:-false} && [[ $DBSNP ]] && {
+	[[ $DBSNP ]] && {
 		variants::vcfzip -t $THREADS -i "$DBSNP"
 	}
 
@@ -674,8 +680,8 @@ pipeline::somatic() {
 		-m $MEMORY \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-n "$(${NOpon:-false} || echo "$PONDB")" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-n "$PONDB" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
@@ -689,7 +695,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
@@ -702,7 +708,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
@@ -715,7 +721,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
@@ -728,7 +734,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
@@ -741,7 +747,7 @@ pipeline::somatic() {
 		-t $THREADS \
 		-M $MAXMEMORY \
 		-g "$GENOME" \
-		-d "$(${NOdbsnp:-false} || echo "$DBSNP")" \
+		-d "$DBSNP" \
 		-r mapper \
 		-1 NIDX \
 		-2 TIDX \
