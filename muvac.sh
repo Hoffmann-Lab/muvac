@@ -1,11 +1,7 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 
-if [[ $BASHBONE_TOOLSDIR ]]; then
-	source "$(dirname "$(readlink -e "$0")")/activate.sh" -i "$BASHBONE_TOOLSDIR" -c true -x cleanup || exit 1
-else
-	source "$(dirname "$(readlink -e "$0")")/activate.sh" -c true -x cleanup || exit 1
-fi
+source "$(dirname "$(readlink -e "$0")")/activate.sh" -c true -x cleanup -a "$*" || exit 1
 
 cleanup() {
 	[[ -e "$LOG" ]] && {
@@ -44,7 +40,7 @@ cleanup() {
 VERSION=$version
 CMD="$(basename "$0") $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
-MAXMEMORY=$(grep -F -i memavailable /proc/meminfo | awk '{printf("%d",$2*0.9/1024)}')
+MAXMEMORY=$(grep -F MemTotal /proc/meminfo | awk '{printf("%d",$2*0.95/1024)}')
 MEMORY=20000
 [[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
 BASHBONE_ERROR="too less memory available ($MAXMEMORY)"
