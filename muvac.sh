@@ -96,21 +96,6 @@ ${INDEX:=false} || {
 	Smd5=true
 }
 
-if [[ $GTF ]]; then
-	BASHBONE_ERROR="annotation file does not exists or is compressed $GTF"
-	readlink -e "$GTF" | file -f - | grep -qF ASCII
-else
-	readlink -e "$GENOME.gtf" | file -f - | grep -qF ASCII && {
-		GTF="$GENOME.gtf"
-	} || {
-		if ${INDEX:=false}; then
-			#commander::warn "gtf file missing. proceeding without star"
-			commander::warn "gtf file missing. star index generation without prior knowledge"
-			#NOstar=true
-		fi
-	}
-fi
-
 if [[ $DBSNP ]]; then
 	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
 	readlink -e "$DBSNP" &> /dev/null
@@ -180,10 +165,6 @@ ${Smd5:=false} || {
 	commander::printinfo "finally updating genome and annotation md5 sums" >> "$LOG"
 	thismd5genome=$(md5sum "$GENOME" | cut -d ' ' -f 1)
 	[[ "$md5genome" != "$thismd5genome" ]] && sed -i "s/md5genome=.*/md5genome=$thismd5genome/" "$GENOME.md5.sh"
-	[[ $GTF ]] && {
-		thismd5gtf=$(md5sum "$GTF" | cut -d ' ' -f 1)
-		[[ "$md5gtf" != "$thismd5gtf" ]] && sed -i "s/md5gtf=.*/md5gtf=$thismd5gtf/" "$GENOME.md5.sh"
-	}
 }
 
 exit 0
