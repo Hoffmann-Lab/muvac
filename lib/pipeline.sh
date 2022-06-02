@@ -20,7 +20,6 @@ pipeline::index(){
 		-t $THREADS \
 		-g "$GENOME" \
 		-x "$GENOME.star.idx" \
-		-f "$GTF" \
 		-o "$TMPDIR" \
 		-p "$TMPDIR" \
 		-F \
@@ -70,6 +69,7 @@ pipeline::_preprocess(){
 			-S ${NOqual:=false} \
 			-s ${SKIPfqual:=false} \
 			-t $THREADS \
+			-M $MAXMEMORY \
 			-o "$OUTDIR/qualities/raw" \
 			-p "$TMPDIR" \
 			-1 FASTQ1 \
@@ -80,6 +80,7 @@ pipeline::_preprocess(){
 				-S ${NOtrim:=false} \
 				-s ${SKIPtrim:=false} \
 				-t $THREADS \
+				-M $MAXMEMORY \
 				-o "$OUTDIR/trimmed" \
 				-p "$TMPDIR" \
 				-1 FASTQ1 \
@@ -89,6 +90,7 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
+				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/trimmed" \
 				-p "$TMPDIR" \
 				-1 FASTQ1 \
@@ -108,6 +110,7 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
+				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/polyntclipped" \
 				-p "$TMPDIR" \
 				-1 FASTQ1 \
@@ -130,6 +133,7 @@ pipeline::_preprocess(){
 					-S ${NOqual:=false} \
 					-s ${SKIPfqual:=false} \
 					-t $THREADS \
+					-M $MAXMEMORY \
 					-o "$OUTDIR/qualities/adapterclipped" \
 					-p "$TMPDIR" \
 					-1 FASTQ1 \
@@ -160,6 +164,7 @@ pipeline::_preprocess(){
 				-S ${NOqual:=false} \
 				-s ${SKIPfqual:=false} \
 				-t $THREADS \
+				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/rrnafiltered" \
 				-p "$TMPDIR" \
 				-1 FASTQ1 \
@@ -211,7 +216,6 @@ pipeline::_mapping(){
 			-i ${INSERTSIZE:=200000} \
 			-n ${NOsplitreads:=true} \
 			-g "$GENOME" \
-			-f "$GTF" \
 			-x "$GENOME.star.idx" \
 			-r mapper
 
