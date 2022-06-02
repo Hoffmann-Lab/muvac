@@ -38,11 +38,9 @@ options::usage() {
 
 		INDEXING OPTIONS
 		-x       | --index                    : triggers creation of all requiered genome and annotation indices plus md5 sums
-		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
+		-g       | --genome [path]            : genome fasta input
 		-no-sege | --no-segemehl              : disables indexing for segemehl
-		-no-star | --no-star                  : disables indexing for STAR. use this option for indexing of plug-n-play CTAT resource
-		                                        NOTE: md5 sum of CTAT [-g].star.idx/SA file needs to be manually added to [-g].md5.sh file afterwards
+		-no-star | --no-star                  : disables indexing for STAR
 		-no-bwa  | --no-bwa                   : disables indexing for BWA
 
 
@@ -51,7 +49,6 @@ options::usage() {
 		                                        NOTE: implies -no-call except for Mutect2
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
 		                                        NOTE: please provide in karyotypic order
 		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
@@ -101,7 +98,6 @@ options::usage() {
 		SOMATIC OPTIONS
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-gtf     | --gtf [path]               : annotation gtf input. default: [-g].gtf
 		-s       | --snp [path]               : genome dbSNP input
 		                                        NOTE: please provide in karyotypic order
 		-p       | --pon [path]               : genome panel of normals input
@@ -249,7 +245,6 @@ options::checkopt (){
 
 		-x        | --index) INDEX=true;;
 		-g        | --genome) arg=true; GENOME="$2";;
-		-gtf      | --gtf) arg=true; GTF="$2";;
 		-o        | --out) arg=true; OUTDIR="$2";;
 		-l        | --log) arg=true; LOG="$2";;
 
