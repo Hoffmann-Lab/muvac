@@ -23,7 +23,8 @@ options::usage() {
 		                                        2 - get full output
 		-o       | --out [path]               : output directory. default: $OUTDIR
 		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
-		-tmp     | --tmp                      : temporary directory. default: $TMPDIR/muvac.XXXXXXXXXX
+		-tmp     | --tmp                      : temporary directory. default: ${TMPDIR:-/tmp}/muvac.XXXXXXXXXX
+		                                        NOTE: respects TMPDIR environment variable
 		-r       | --remove                   : remove temporary and unnecessary files upon succesful termination
 		-rr      | --remove-remove            : remove temporary and unnecessary files termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
@@ -32,8 +33,8 @@ options::usage() {
 		                                        default: $MEMORY which allows for $MTHREADS instances and $MTHREADS SAM/BAM slices according to -xmem
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
 		-resume  | --resume-from [string]     : resume from a specific pipeline step (see -dev)
-		-skip    | --skip [string,..]         : skip specific pipeline step(s). comma seperated (see -dev)
-		-redo    | --redo [string,..]         : redo specific pipeline step(s). comma seperated (see -dev)
+		-skip    | --skip [string,..]         : skip specific pipeline step(s). comma separated (see -dev)
+		-redo    | --redo [string,..]         : redo specific pipeline step(s). comma separated (see -dev)
 
 
 		INDEXING OPTIONS
@@ -51,14 +52,14 @@ options::usage() {
 		                                        NOTE: no fasta file implies -no-map
 		-s       | --snp [path]               : genome dbSNP input. default: [-g].vcf or [-g].vcf.gz
 		                                        NOTE: please provide in karyotypic order
-		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma seperated
-		-2       | --fq2 [path,..]            : fastq input. mate pair. comma seperated
-		-3       | --fq3 [path,..]            : fastq input. UMI sequences. comma seperated
+		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma separated
+		-2       | --fq2 [path,..]            : fastq input. mate pair. comma separated
+		-3       | --fq3 [path,..]            : fastq input. UMI sequences. comma separated
 		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
 		                                      : NOTE: clipping includes simple 3' quality trimming anyways
-		-a1      | --adapter1 [string,..]     : adapter sequence(s) of single or first mate. comma seperated
-		-a2      | --adapter2 [string,..]     : adapter sequence(s) of mate pair. comma seperated (can be the same as [-a1]. no revere complement required)
+		-a1      | --adapter1 [string,..]     : adapter sequence(s) of single or first mate. comma separated. default: automatically inferred
+		-a2      | --adapter2 [string,..]     : adapter sequence(s) of mate pair (don't reverse complement). comma separated. default: automatically inferred
 		-cor     | --correction               : enables majority based raw read error correction
 		-rrm     | --rrnafilter               : enables rRNA filter
 		-no-map  | --no-mapping               : disables read alignment and downstream analyses
@@ -68,7 +69,7 @@ options::usage() {
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
 		-no-bwa  | --no-bwa                   : disables mapping by BWA
-		-m       | --mapped [path,..]         : SAM/BAM input. comma seperated or a file with all paths (replaces fastq input and processing)
+		-m       | --mapped [path,..]         : SAM/BAM input. comma separated or a file with all paths (replaces fastq input and processing)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
 		-no-uniq | --no-uniqify               : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                  : disables sorting alignments
@@ -81,8 +82,7 @@ options::usage() {
 		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls. default: SAMPLE
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
-		-no-idx  | --no-index                 : disables indexing alignments
-		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses
+		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses and thus adapter inference
 		                                        NOTE: given -no-qual and unless -no-stats option, intermediate per file analyses replaced by bulk analysis
 		-no-stats| --no-statistics            : disables statistics from read and alignment quality analyses
 		-no-pondb| --no-pondatabase           : disables creation of a panel of normals database from panel of normals variant calling
@@ -102,17 +102,17 @@ options::usage() {
 		                                        NOTE: please provide in karyotypic order
 		-p       | --pon [path]               : genome panel of normals input
 		                                        NOTE: please provide in karyotypic order
-		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma seperated
-		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma seperated
-		-n3      | --normalfq3 [path,..]      : normal fastq input. UMI sequences. comma seperated
-		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first mate. comma seperated
-		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma seperated
-		-t3      | --tumorfq3 [path,..]       : tumor fastq input. UMI sequences. comma seperated
+		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma separated
+		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma separated
+		-n3      | --normalfq3 [path,..]      : normal fastq input. UMI sequences. comma separated
+		-t1      | --tumorfq1 [path,..]       : tumor fastq input. single or first mate. comma separated
+		-t2      | --tumorfq2 [path,..]       : tumor fastq input. mate pair. comma separated
+		-t3      | --tumorfq3 [path,..]       : tumor fastq input. UMI sequences. comma separated
 		-no-trim | --no-trimming              : disables quality trimming utilizing a conservative sliding window approach and simple 5' clipping
 		-no-clip | --no-clipping              : disables removal of poly N, mono- and di-nucleotide ends as well as adapter sequences when used with -a
 		                                      : NOTE: clipping includes simple 3' quality trimming anyways
-		-a1      | --adapter1 [string,..]     : adapter sequence(s) of single or first mate. comma seperated
-		-a2      | --adapter2 [string,..]     : adapter sequence(s) of mate pair. comma seperated (can be the same as [-a1]. no revere complement required)
+		-a1      | --adapter1 [string,..]     : adapter sequence(s) of single or first mate. comma separated. default: automatically inferred
+		-a2      | --adapter2 [string,..]     : adapter sequence(s) of mate pair (don't reverse complement). comma separated. default: automatically inferred
 		-cor     | --correction               : enables majority based raw read error correction
 		-rrm     | --rrnafilter               : enables rRNA filter
 		-no-map  | --no-mapping               : disables read alignment and downstream analyses
@@ -122,8 +122,8 @@ options::usage() {
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
 		-no-bwa  | --no-bwa                   : disables mapping by BWA
-		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma seperated (replaces fastq input)
-		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma seperated (replaces fastq input)
+		-nm      | --normalmapped [path,..]   : normal SAM/BAM input. comma separated (replaces fastq input)
+		-tm      | --tumormapped [path,..]    : tumor SAM/BAM input. comma separated (replaces fastq input)
 		-mn      | --mapper-name [string]     : name to use for output subdirectories in case of SAM/BAM input. default: custom
 		-no-uniq | --no-uniqify               : disables extraction of properly paired and uniquely mapped reads
 		-no-sort | --no-sort                  : disables sorting alignments
@@ -136,8 +136,7 @@ options::usage() {
 		-rgn     | --readgroup-name [string]  : sets custom read group name - use TUMOR or NORMAL for subsequent somatic calls. default: SAMPLE
 		-no-laln | --no-leftalign             : disables left alignment by GATK
 		-no-bqsr | --no-qualrecalibration     : disables any base quality score recalibration (BQSR)
-		-no-idx  | --no-index                 : disables indexing alignments
-		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses
+		-no-qual | --no-qualityanalysis       : disables intermediate read and alignment quality analyses and thus adapter inference
 		                                        NOTE: given -no-qual and unless -no-stats option, intermediate per file analyses replaced by bulk analysis
 		-no-stats| --no-statistics            : disables statistics from read and alignment quality analyses
 		-no-call | --no-call                  : disables variant calling and downstream analyses
