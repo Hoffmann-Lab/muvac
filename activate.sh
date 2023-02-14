@@ -14,8 +14,16 @@ while getopts ':i:c:x:a:h' arg; do
 		i) toolsdir="$OPTARG";;
 		c) activate="$OPTARG";;
 		x) exitfun="$OPTARG";;
-		a) shift $((OPTIND-2)); break;;
 		h) help=true;;
+		a) shift $((OPTIND-2)); break;;
+		:)	if [[ "$OPTARG" == "a" ]]; then
+				shift $((OPTIND-1))
+				break
+			else
+				echo "argument missing" >&2
+			fi
+			return 1
+			;;
 	esac
 done
 

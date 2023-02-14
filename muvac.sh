@@ -8,15 +8,15 @@ cleanup() {
 		commander::printinfo "date: $(date)" | tee -ia "$LOG"
 		[[ $1 -eq 0 ]] && commander::printinfo "success" | tee -ia "$LOG" || commander::printinfo "failed" | tee -ia "$LOG"
 	}
-	[[ -e "$TMPDIR" ]] && {
-		find -L "$TMPDIR" -type f -name "cleanup.*" -exec rm -f "{}" \; &> /dev/null || true
-		find -L "$TMPDIR" -depth -type d -name "cleanup.*" -exec rm -rf "{}" \; &> /dev/null || true
+	[[ -e "$CLEANUP_TMPDIR" ]] && {
+		find -L "$CLEANUP_TMPDIR" -type f -name "cleanup.*" -exec rm -f "{}" \; &> /dev/null || true
+		find -L "$CLEANUP_TMPDIR" -depth -type d -name "cleanup.*" -exec rm -rf "{}" \; &> /dev/null || true
 	}
-	${FORCECLEANUP:=false} || [[ $1 -eq 0 ]] && ${CLEANUP:=false} && {
-		[[ -e "$TMPDIR" ]] && {
-			find -L "$TMPDIR" -type f -exec rm -f "{}" \; &> /dev/null || true
-			find -L "$TMPDIR" -depth -type d -exec rm -rf "{}" \; &> /dev/null || true
-			rm -rf "$TMPDIR"
+	[[ $1 -eq 0 ]] && ${CLEANUP:=false} || ${FORCECLEANUP:=false} && {
+		[[ -e "$CLEANUP_TMPDIR" ]] && {
+			find -L "$CLEANUP_TMPDIR" -type f -exec rm -f "{}" \; &> /dev/null || true
+			find -L "$CLEANUP_TMPDIR" -depth -type d -exec rm -rf "{}" \; &> /dev/null || true
+			rm -rf "$CLEANUP_TMPDIR"
 		}
 		[[ -e "$OUTDIR" ]] && {
 			local b
@@ -47,7 +47,7 @@ BASHBONE_ERROR="too less memory available ($MAXMEMORY)"
 [[ $MTHREADS -eq 0 ]] && false
 VERBOSITY=0
 OUTDIR="$PWD/results"
-TMPDIR="$OUTDIR"
+TMPDIR="${TMPDIR:-$OUTDIR}"
 DISTANCE=5
 
 BASHBONE_ERROR="parameterization issue"
@@ -55,21 +55,20 @@ options::parse "$@"
 
 BASHBONE_ERROR="cannot access $OUTDIR"
 mkdir -p "$OUTDIR"
-OUTDIR="$(readlink -e "$OUTDIR")"
+OUTDIR="$(realpath -se "$OUTDIR")"
 [[ ! $LOG ]] && LOG="$OUTDIR/run.log"
 BASHBONE_ERROR="cannot access $LOG"
 mkdir -p "$(dirname "$LOG")"
 
 BASHBONE_ERROR="cannot access $TMPDIR"
 if [[ $PREVIOUSTMPDIR ]]; then
-	TMPDIR="$PREVIOUSTMPDIR"
-	mkdir -p "$TMPDIR"
-	TMPDIR="$(readlink -e "$TMPDIR")"
+	TMPDIR="$(realpath -se "$PREVIOUSTMPDIR")"
 else
 	mkdir -p "$TMPDIR"
-	TMPDIR="$(readlink -e "$TMPDIR")"
+	TMPDIR="$(realpath -se "$TMPDIR")"
 	TMPDIR="$(mktemp -d -p "$TMPDIR" muvac.XXXXXXXXXX)"
 fi
+CLEANUP_TMPDIR="$TMPDIR"
 
 ${INDEX:=false} || {
 	BASHBONE_ERROR="fastq or sam/bam file input missing"
@@ -98,7 +97,7 @@ ${INDEX:=false} || {
 
 if [[ $DBSNP ]]; then
 	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
-	readlink -e "$DBSNP" &> /dev/null
+	[[ -s "$DBSNP" ]]
 else
 	if [[ ! $DBSNP ]]; then
 		commander::warn "dbSNP file missing. proceeding without dbSNP file"
@@ -108,7 +107,7 @@ fi
 
 if [[ $PONDB ]]; then
 	BASHBONE_ERROR="pon file does not exists $PONDB"
-	readlink -e "$PONDB" &> /dev/null
+	[[ -s "$PONDB" ]]
 else
 	if [[ ! $PONDB ]]; then
 		commander::warn "pon file missing. proceeding without pon file"

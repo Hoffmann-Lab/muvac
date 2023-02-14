@@ -1,9 +1,8 @@
 # Muvac
 
-
 Muvac implements multiple variant calling options from Exome-Seq/WG-Seq or RNA-Seq data. It offers free GATK best-practices in an optimized, parallelized fashion.
 
-Muvac leverages on bashbone, which is a bash library for workflow and pipeline design within but not restricted to the scope of Next Generation Sequencing (NGS) data analyses. muvac makes use of bashbones best-practice parameterized and run-time tweaked software wrappers and compiles them into a multi-threaded pipeline for analyses of model AND non-model organisms.
+Muvac leverages on bashbone, which is a bash/biobash library for workflow and pipeline design within but not restricted to the scope of Next Generation Sequencing (NGS) data analyses. muvac makes use of bashbones best-practice parameterized and run-time tweaked software wrappers and compiles them into a multi-threaded pipeline for analyses of model AND non-model organisms.
 
 ## Features
 
@@ -84,10 +83,10 @@ The setup routine will always install the latest software via conda, which can b
 ./setup.sh -i conda_tools -d <path/of/installation>
 ```
 
-Trimmomatic, segemehl and mdless will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
+Trimmomatic, segemehl, mdless and gztool will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
 
 ```bash
-./setup.sh -i trimmomatic,segemehl,mdless -d <path/of/installation>
+./setup.sh -i trimmomatic,segemehl,mdless,gztool -d <path/of/installation>
 ```
 
 # Usage
@@ -98,10 +97,13 @@ source <path/of/installation/latest/muvac/activate.sh>
 bashbone -h
 ```
 
-In order to get all function work properly, enable muvac via bashbone to use conda environments. Conda can be disabled analogously.
+In order to get all function work properly, enable bashbone to use conda environments. Conda and bashbone it self can be disabled analogously.
 ```bash
 bashbone -c
+# disable conda
 bashbone -s
+# disable bashbone
+bashbone -x
 ```
 
 Shortcut:
@@ -126,7 +128,7 @@ Human genome chromosomes must follow GATK order and naming schema: chrM,chr1..ch
 
 ## Retrieve genomes
 
-Use the enclosed script to fetch human hg19/hg38 or mouse mm9/mm10 genomes and annotations. Plug-n-play CTAT genome resource made for gene fusion detection and shipped with STAR index can be selected optionally.
+Use the enclosed script to fetch human hg19/hg38 or mouse mm9/mm10/mm11 genomes and annotations. Plug-n-play CTAT genome resource made for gene fusion detection and shipped with STAR index can be selected optionally.
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh> -c true
@@ -305,6 +307,7 @@ muvac.sh [...] -redo bqsr,idx,hc
 | fastqc        | <https://www.bioinformatics.babraham.ac.uk/projects/fastqc>  | NA |
 | freebayes     | <https://github.com/ekg/freebayes>                           | arXiv:1207.3907 |
 | GATK          | <https://github.com/broadinstitute/gatk>                     | 10.1101/gr.107524.110 <br> 10.1038/ng.806 |
+| GNU Parallel  | <https://www.gnu.org/software/parallel/>                            | 10.5281/zenodo.1146014 |
 | Picard        | <http://broadinstitute.github.io/picard>                     | NA |
 | Platypus      | <https://rahmanteamdevelopment.github.io/Platypus>           | 10.1038/ng.3036 |
 | Rcorrector    | <https://github.com/mourisl/Rcorrector>                      | 10.1186/s13742-015-0089-y |
@@ -316,7 +319,7 @@ muvac.sh [...] -redo bqsr,idx,hc
 | Trimmomatic   | <http://www.usadellab.org/cms/?page=trimmomatic>             | 10.1093/bioinformatics/btu170 |
 | VarDict       | <https://github.com/AstraZeneca-NGS/VarDict>                 | 10.1093/nar/gkw227 |
 | VarScan       | <http://dkoboldt.github.io/varscan>                          | 10.1101/gr.129684.111 |
-| vcflib        | <https://github.com/vcflib/vcflib>                           | 10.1101/2021.05.21.445151 |
+| vcflib        | <https://github.com/vcflib/vcflib>                           | 10.1371/journal.pcbi.1009123 |
 | Vt            | <https://genome.sph.umich.edu/wiki/Vt>                       | 10.1093/bioinformatics/btv112 |
 
 ## In preparation
@@ -327,7 +330,7 @@ muvac.sh [...] -redo bqsr,idx,hc
 
 # Supplementary information
 
-Muvac can be executed in parallel instances and thus is able to be submitted as a job into a queuing system like a Sun Grid Engine (SGE). This could be easily done by using scripts written via here-documents or via the bashbone builtin `commander::qsubcmd`. The latter makes use of array jobs, which enables to wait for completion of all jobs, handle single exit codes and amend used resources via `qalter -tc <instances> <jobname>`.
+Muvac can be executed in parallel instances and thus are able to be submitted as jobs into a queuing system like a Sun Grid Engine (SGE). This could be easily done by utilizing `commander::qsubcmd. This function makes use of array jobs, which further allows to wait for completion of all jobs, handle single exit codes and alter used resources via `commander::qalter.
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
@@ -338,17 +341,18 @@ for i in *R1.fastq.gz; do
 	commander::makecmd -a cmd1 -c {COMMANDER[0]}<<- CMD
 		muvac.sh -v 2 -t <threads> -g <fasta> -gtf <gtf> -o <outdir> -l <logfile> -tmp <tmpdir> -1 $i -2 $j
 	CMD
+  # or simply cmds+=("muvac.sh [...]")
 done
-commander::qsubcmd -r -l h="<hostname>|<hostname>" -p <env> -t <threads> -i <instances> -n <jobname> -o <logdir> -a cmds
-# analogously: echo job.\$SGE_TASK_ID.sh | qsub -sync n -pe <env> <threads> -t 1-<#jobs> -tc <instances> -l h="<hostname>|<hostname>" -S /bin/bash -N <jobname> -o <logfile> -j y -V -cwd
+commander::qsubcmd -r -p <env> -t <threads> -i <instances> -n <jobname> -o <logdir> -a cmds
+commander::qstat
+commander::qalter -p <jobname|jobid> -i <instances>
 ```
 
-In some cases a glibc pthreads bug (<https://sourceware.org/bugzilla/show_bug.cgi?id=23275>) may cause pigz failures (`internal threads error`) and premature termination of tools leveraging on it e.g. Cutadapt. One can circumvent this by e.g. making use of an alternative pthreads library via `LD_PRELOAD`
+In some rare cases a glibc pthreads bug (<https://sourceware.org/bugzilla/show_bug.cgi?id=23275>) may cause pigz failures (`internal threads error`) and premature termination of tools leveraging on it e.g. Cutadapt and pigz. One can circumvent this by e.g. making use of an alternative pthreads library e.g. compiled without lock elision via `LD_PRELOAD`
 
 ```bash
-source <path/of/installation/latest/muvac/activate.sh>
-LD_PRELOAD=/lib64/noelision/libpthread.so.0 muvac.sh
-LD_PRELOAD=/gsc/biosw/src/glibc-2.32/lib/libpthread.so.0 muvac.sh
+source <path/of/installation/latest/bashbone/activate.sh>
+LD_PRELOAD=</path/to/no-elision/libpthread.so.0> <command>
 ```
 
 # Closing remarks

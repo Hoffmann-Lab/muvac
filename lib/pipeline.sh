@@ -53,7 +53,7 @@ pipeline::_slice(){
 		-M $MAXMEMORY \
 		-r mapper \
 		-c slicesinfo \
-		-p "$TMPDIR" || return 1
+		-p "$TMPDIR"
 	! $1 && ! $2 && SLICED=true
 	! $1 && ${SKIPslice:-false} && SLICED=true
 
@@ -73,7 +73,9 @@ pipeline::_preprocess(){
 			-o "$OUTDIR/qualities/raw" \
 			-p "$TMPDIR" \
 			-1 FASTQ1 \
-			-2 FASTQ2
+			-2 FASTQ2 \
+			-a ADAPTER1 \
+			-A ADAPTER2
 
 		${NOtrim:=false} || {
 			preprocess::trimmomatic \
@@ -273,6 +275,15 @@ pipeline::_mapping(){
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped" \
 		-r mapper
+	alignment::postprocess \
+		-S ${NOsort:=false} \
+		-s ${SKIPsort:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
+
 	(${NOuniq:=false} && ! ${NOsort:=false}) || (! ${NOuniq:=false} && ! ${NOsort:=false}) && {
 		alignment::add4stats -r mapper
 		alignment::bamqc \
@@ -313,6 +324,14 @@ pipeline::germline() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOaddrg:=false} \
+		-s ${SKIPaddrg:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -328,6 +347,14 @@ pipeline::germline() {
 			-x "$REGEX" \
 			-p "$TMPDIR" \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOrmd:=false} \
+			-s ${SKIPrmd:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -347,6 +374,14 @@ pipeline::germline() {
 			-r mapper \
 			-c slicesinfo \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOcmo:=false} \
+			-s ${SKIPcmo:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -374,6 +409,14 @@ pipeline::germline() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOreo:=true} \
+		-s ${SKIPreo:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -388,6 +431,14 @@ pipeline::germline() {
 			-c slicesinfo \
 			-p "$TMPDIR" \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOnsplit:=false} \
+			-s ${SKIPnsplit:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 	}
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
@@ -402,6 +453,14 @@ pipeline::germline() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOlaln:=false} \
+		-s ${SKIPlaln:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	[[ $DBSNP ]] && {
 		variants::vcfzip -t $THREADS -i "$DBSNP"
@@ -420,10 +479,9 @@ pipeline::germline() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
-
 	alignment::postprocess \
-		-S ${NOidx:=false} \
-		-s ${SKIPidx:=false} \
+		-S ${NObqsr:=false} \
+		-s ${SKIPbqsr:=false} \
 		-j index \
 		-t $THREADS \
 		-p "$TMPDIR" \
@@ -559,6 +617,14 @@ pipeline::somatic() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOaddrg:=false} \
+		-s ${SKIPaddrg:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -574,6 +640,14 @@ pipeline::somatic() {
 			-x "$REGEX" \
 			-p "$TMPDIR" \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOrmd:=false} \
+			-s ${SKIPrmd:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -593,6 +667,14 @@ pipeline::somatic() {
 			-r mapper \
 			-c slicesinfo \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOcmo:=false} \
+			-s ${SKIPcmo:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -620,6 +702,14 @@ pipeline::somatic() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOreo:=true} \
+		-s ${SKIPreo:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -634,6 +724,14 @@ pipeline::somatic() {
 			-c slicesinfo \
 			-p "$TMPDIR" \
 			-o "$OUTDIR/mapped"
+		alignment::postprocess \
+			-S ${NOnsplit:=false} \
+			-s ${SKIPnsplit:=false} \
+			-j index \
+			-t $THREADS \
+			-p "$TMPDIR" \
+			-o "$OUTDIR/mapped" \
+			-r mapper
 	}
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
@@ -648,6 +746,14 @@ pipeline::somatic() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
+	alignment::postprocess \
+		-S ${NOlaln:=false} \
+		-s ${SKIPlaln:=false} \
+		-j index \
+		-t $THREADS \
+		-p "$TMPDIR" \
+		-o "$OUTDIR/mapped" \
+		-r mapper
 
 	[[ $DBSNP ]] && {
 		variants::vcfzip -t $THREADS -i "$DBSNP"
@@ -666,10 +772,9 @@ pipeline::somatic() {
 		-c slicesinfo \
 		-p "$TMPDIR" \
 		-o "$OUTDIR/mapped"
-
 	alignment::postprocess \
-		-S ${NOidx:=false} \
-		-s ${SKIPidx:=false} \
+		-S ${NObqsr:=false} \
+		-s ${SKIPbqsr:=false} \
 		-j index \
 		-t $THREADS \
 		-p "$TMPDIR" \
