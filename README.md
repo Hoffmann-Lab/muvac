@@ -46,47 +46,37 @@ cd muvac
 git checkout --recurse-submodules $(git describe --tags)
 ```
 
-# Quick start (without installation)
-Please see installation section to get all third-party tools set-upped and subsequently all functions to work properly.
-
-Load the library and list available functions. Each function comes with a usage. Or check out the Muvac usage.
-
-```bash
-source activate.sh
-bashbone -h
-muvac.sh -h
-```
 
 # Installation
 
 ## Full installation from scratch
 
 ```bash
-./setup.sh -i all -d <path/to/installation>
+scripts/setup.sh -i all -d <path/to/installation>
 source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -h
 ```
 
-### Upgrade to a new release or if bashbone was previously installed
+## Upgrade to a new release or if bashbone was previously installed
 
 ```bash
-./setup.sh -i upgrade -d <path/of/installation>
+scripts/setup.sh -i upgrade -d <path/of/installation>
 source <path/of/installation/latest/muvac/activate.sh>
 muvac.sh -h
 ```
 
-### Update tools
+## Update tools
 
 The setup routine will always install the latest software via conda, which can be updated by running the related setup functions again.
 
 ```bash
-./setup.sh -i conda_tools -d <path/of/installation>
+scripts/setup.sh -i conda_tools -d <path/of/installation>
 ```
 
 Trimmomatic, segemehl, mdless and gztool will be installed next to the conda environments. If new releases are available, they will be automatically fetched and installed upon running the related setup functions again.
 
 ```bash
-./setup.sh -i trimmomatic,segemehl,mdless,gztool -d <path/of/installation>
+scripts/setup.sh -i trimmomatic,segemehl,mdless,gztool -d <path/of/installation>
 ```
 
 # Usage
@@ -97,11 +87,10 @@ source <path/of/installation/latest/muvac/activate.sh>
 bashbone -h
 ```
 
-In order to get all function work properly, enable bashbone to use conda environments. Conda and bashbone it self can be disabled analogously.
+Now enable bashbone to use its conda environments in order to make scripts and functions to operate properly. Conda as well as bashbone can be disabled afterwards.
 ```bash
+# enable/disable conda
 bashbone -c
-# disable conda
-bashbone -s
 # disable bashbone
 bashbone -x
 ```
@@ -110,7 +99,6 @@ Shortcut:
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh> -c true
-bashbone -s
 ```
 
 ## Retrieve SRA datasets
@@ -138,7 +126,7 @@ dlgenome.sh -h
 ## Index genomes
 
 ```bash
-source <path/of/installation/latest/muvac/activate.sh>
+source <path/of/installation/latest/muvac/activate.sh> -c true
 muvac.sh -x -g <path/to/genome.fa> -gtf <path/to/genome.gtf>
 ```
 
@@ -194,7 +182,8 @@ TruSeq full length DNA & RNA R1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA R2: AGATCGGAA
 
 TruSeq full length DNA MethC R1: AGATCGGAAGAGCACACGTCTGAAC R2: AGATCGGAAGAGCGTCGTGTAGGGA
 
-TruSeq Small RNA: TGGAATTCTCGGGTGCCAAGG
+TruSeq Small RNA 3': TGGAATTCTCGGGTGCCAAGG
+TruSeq Small RNA 5': GTTCAGAGTTCTACAGTCCGACGATC
 
 ```bash
 source <path/of/installation/latest/muvac/activate.sh>
