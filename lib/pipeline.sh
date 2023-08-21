@@ -1,7 +1,12 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 
-pipeline::index(){
+function pipeline::index(){
+	genome::mkdict \
+		-F \
+		-t $THREADS \
+		-i "$GENOME"
+
 	unset NA1 NA2
 	alignment::segemehl \
 		-S ${NOsege:=false} \
@@ -35,14 +40,11 @@ pipeline::index(){
 		-F \
 		-r NA1 \
 		-1 NA2
-	genome::mkdict \
-		-F \
-		-t $THREADS \
-		-i "$GENOME"
+
 	return 0
 }
 
-pipeline::_slice(){
+function pipeline::_slice(){
 	alignment::slice \
 		-S ${SLICED:-$1} \
 		-s ${SKIPslice:-$2} \
@@ -57,7 +59,7 @@ pipeline::_slice(){
 	return 0
 }
 
-pipeline::_preprocess(){
+function pipeline::_preprocess(){
 	if [[ ! $MAPPED ]]; then
 		declare -a qualdirs
 
@@ -86,7 +88,7 @@ pipeline::_preprocess(){
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/trimmed" -1 FASTQ1 -2 FASTQ2
 			preprocess::fastqc \
 				-S ${NOqual:=false} \
-				-s ${SKIPfqual:=false} \
+				-s ${SKIPtrim:=false} \
 				-t $THREADS \
 				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/trimmed" \
@@ -94,10 +96,10 @@ pipeline::_preprocess(){
 				-2 FASTQ2
 		}
 
-		${NOclip:=false} || {
+		${NOpclip:=true} || {
 			preprocess::rmpolynt \
-				-S ${NOclip:=false} \
-				-s ${SKIPclip:=false} \
+				-S ${NOpclip:=true} \
+				-s ${SKIPpclip:=false} \
 				-t $THREADS \
 				-o "$OUTDIR/polyntclipped" \
 				-1 FASTQ1 \
@@ -105,7 +107,7 @@ pipeline::_preprocess(){
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/polyntclipped" -1 FASTQ1 -2 FASTQ2
 			preprocess::fastqc \
 				-S ${NOqual:=false} \
-				-s ${SKIPfqual:=false} \
+				-s ${SKIPpclip:=false} \
 				-t $THREADS \
 				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/polyntclipped" \
@@ -127,7 +129,7 @@ pipeline::_preprocess(){
 				preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/adapterclipped" -1 FASTQ1 -2 FASTQ2
 				preprocess::fastqc \
 					-S ${NOqual:=false} \
-					-s ${SKIPfqual:=false} \
+					-s ${SKIPclip:=false} \
 					-t $THREADS \
 					-M $MAXMEMORY \
 					-o "$OUTDIR/qualities/adapterclipped" \
@@ -155,7 +157,7 @@ pipeline::_preprocess(){
 			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/rrnafiltered" -1 FASTQ1 -2 FASTQ2
 			preprocess::fastqc \
 				-S ${NOqual:=false} \
-				-s ${SKIPfqual:=false} \
+				-s ${SKIPrrm:=false} \
 				-t $THREADS \
 				-M $MAXMEMORY \
 				-o "$OUTDIR/qualities/rrnafiltered" \
@@ -177,7 +179,7 @@ pipeline::_preprocess(){
 }
 
 
-pipeline::_mapping(){
+function pipeline::_mapping(){
 	if [[ ! $MAPPED ]]; then
 		alignment::segemehl \
 			-S ${NOsege:=false} \
@@ -249,7 +251,7 @@ pipeline::_mapping(){
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPuniq:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -273,7 +275,7 @@ pipeline::_mapping(){
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPsort:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -281,7 +283,7 @@ pipeline::_mapping(){
 	return 0
 }
 
-pipeline::germline() {
+function pipeline::germline(){
 	declare -a mapper
 	declare -A slicesinfo
 
@@ -338,7 +340,7 @@ pipeline::germline() {
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPrmd:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -364,7 +366,7 @@ pipeline::germline() {
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPcmo:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -434,10 +436,6 @@ pipeline::germline() {
 		-t $THREADS \
 		-o "$OUTDIR/mapped" \
 		-r mapper
-
-	[[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -i "$DBSNP"
-	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
 	alignment::bqsr \
@@ -551,7 +549,7 @@ pipeline::germline() {
 	return 0
 }
 
-pipeline::somatic() {
+function pipeline::somatic(){
 	declare -a mapper
 	declare -A slicesinfo
 
@@ -609,7 +607,7 @@ pipeline::somatic() {
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPrmd:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -635,7 +633,7 @@ pipeline::somatic() {
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
-			-s ${SKIPmqual:=false} \
+			-s ${SKIPcmo:=false} \
 			-t $THREADS \
 			-r mapper
 	}
@@ -705,10 +703,6 @@ pipeline::somatic() {
 		-t $THREADS \
 		-o "$OUTDIR/mapped" \
 		-r mapper
-
-	[[ $DBSNP ]] && {
-		variants::vcfzip -t $THREADS -i "$DBSNP"
-	}
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
 	alignment::bqsr \
