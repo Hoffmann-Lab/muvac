@@ -21,7 +21,7 @@ cleanup() {
 		[[ -e "$OUTDIR" ]] && {
 			local b f
 			for f in "${FASTQ1[@]}"; do
-				readlink -e "$f" | file -f - | grep -qE '(gzip|bzip)' && b=$(basename "$f" | rev | cut -d '.' -f 3- | rev) || b=$(basename "$f" | rev | cut -d '.' -f 2- | rev)
+				readlink -e "$f" | file -b --mime-type -f - | grep -qF -e 'gzip' -e 'bzip2' && b=$(basename "$f" | rev | cut -d '.' -f 3- | rev) || b=$(basename "$f" | rev | cut -d '.' -f 2- | rev)
 				find -L "$OUTDIR" -depth -type d -name "$b*._STAR*" -exec rm -rf {} \; &> /dev/null || true
 				find -L "$OUTDIR" -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .sorted.bam).bam"' bash {} \; &> /dev/null || true
 				find -L "$OUTDIR" -type f -name "$b*.*.gz" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .gz)"' bash {} \; &> /dev/null || true
@@ -83,7 +83,7 @@ ${INDEX:=false} || {
 
 [[ $GENOME ]] && {
 	BASHBONE_ERROR="genome file does not exists or is compressed $GENOME"
-	readlink -e "$GENOME" | file -f - | grep -qF ASCII
+	readlink -e "$GENOME" | file -b --mime-type -f - | grep -qF 'text'
 	[[ ! -s "$GENOME.md5.sh" ]] && cp "$BASHBONE_DIR/lib/md5.sh" "$GENOME.md5.sh"
 	source "$GENOME.md5.sh"
 } || {
