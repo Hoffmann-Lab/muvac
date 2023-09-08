@@ -291,13 +291,6 @@ function pipeline::germline(){
 	pipeline::_mapping
 	[[ ${#mapper[@]} -eq 0 ]] && return 0
 
-	genome::mkdict \
-		-S ${NOdict:=false} \
-		-s ${SKIPdict:=false} \
-		-5 ${SKIPmd5:=false} \
-		-i "$GENOME" \
-		-t $THREADS
-
 	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
 	alignment::addreadgroup \
 		-S ${NOaddrg:=false} \
@@ -556,13 +549,6 @@ function pipeline::somatic(){
 	pipeline::_preprocess
 	pipeline::_mapping
 	[[ ${#mapper[@]} -eq 0 ]] && return 0
-
-	genome::mkdict \
-		-S ${NOdict:=false} \
-		-s ${SKIPdict:=false} \
-		-5 ${SKIPmd5:=false} \
-		-i "$GENOME" \
-		-t $THREADS
 
 	pipeline::_slice ${NOaddrg:=false} ${SKIPaddrg:=false}
 	alignment::addreadgroup \
