@@ -28,7 +28,7 @@ function options::usage(){
 		-r       | --remove                   : remove temporary and unnecessary files upon successful termination
 		-rr      | --remove-remove            : remove temporary and unnecessary files upon termination
 		-t       | --threads [value]          : number of threads. default: $THREADS
-		-xmem    | --max-memory [value]       : total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
+		-xmem    | --max-memory [value]       : fraction or total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
 		-mem     | --memory [value]           : allocatable memory per instance of memory greedy tools in MB. defines internal number of parallel instances
 		                                        default: $MEMORY which allows for $MTHREADS instances and $MTHREADS SAM/BAM slices according to -xmem
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
@@ -241,7 +241,7 @@ function options::checkopt(){
 		-v        | --verbosity) arg=true; VERBOSITY=$2;;
 		-t        | --threads) arg=true; THREADS=$2;;
 		-mem      | --memory) arg=true; MEMORY=$2;;
-		-xmem     | --max-memory) arg=true; MAXMEMORY=$2;;
+		-xmem     | --max-memory) arg=true; [[ ${2%.*} -ge 1 ]] && MAXMEMORY=${2%.*} || MAXMEMORY=$(grep -F MemTotal /proc/meminfo | awk -v i=$2 '{printf("%d",$2/1024*0.95*i)}');;
 
 		-x        | --index) INDEX=true;;
 		-g        | --genome) arg=true; GENOME="$2";;
