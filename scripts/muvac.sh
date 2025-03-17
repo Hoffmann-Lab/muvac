@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 # (c) Konstantin Riege
 
-source "$(dirname "$(dirname "$(readlink -e "$0")")")/activate.sh" -c false -r true -x cleanup -a "$@" || exit 1
+source "$(dirname "$(dirname "$(readlink -e "$0")")")/activate.sh" -l true -c false -r true -x cleanup -a "$@" || exit 1
 
 cleanup() {
 	[[ -e "$LOG" ]] && {
@@ -12,7 +12,7 @@ cleanup() {
 		find -L "$CLEANUP_TMPDIR" -type f -name "cleanup.*" -exec rm -f "{}" \; &> /dev/null || true
 		find -L "$CLEANUP_TMPDIR" -depth -type d -name "cleanup.*" -exec rm -rf "{}" \; &> /dev/null || true
 	}
-	[[ $1 -eq 0 ]] && ${CLEANUP:=false} || ${FORCECLEANUP:=false} && {
+	${CLEANUP:=true} && {
 		[[ -e "$CLEANUP_TMPDIR" ]] && {
 			find -L "$CLEANUP_TMPDIR" -type f -exec rm -f "{}" \; &> /dev/null || true
 			find -L "$CLEANUP_TMPDIR" -depth -type d -exec rm -rf "{}" \; &> /dev/null || true
@@ -23,13 +23,13 @@ cleanup() {
 			for f in "${FASTQ1[@]}"; do
 				readlink -e "$f" | file -b --mime-type -f - | grep -qF -e 'gzip' -e 'bzip2' && b=$(basename "$f" | rev | cut -d '.' -f 3- | rev) || b=$(basename "$f" | rev | cut -d '.' -f 2- | rev)
 				find -L "$OUTDIR" -depth -type d -name "$b*._STAR*" -exec rm -rf {} \; &> /dev/null || true
-				find -L "$OUTDIR" -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .sorted.bam).bam"' bash {} \; &> /dev/null || true
+				# find -L "$OUTDIR" -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .sorted.bam).bam"' bash {} \; &> /dev/null || true
 				find -L "$OUTDIR" -type f -name "$b*.*.gz" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .gz)"' bash {} \; &> /dev/null || true
 			done
 			for f in "${MAPPED[@]}"; do
 				b=$(basename "$f" | rev | cut -d '.' -f 2- | rev)
 				find -L "$OUTDIR" -depth -type d -name "$b*._STAR*" -exec rm -rf "{}" \; &> /dev/null || true
-				find -L "$OUTDIR" -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .sorted.bam).bam"' bash {} \; &> /dev/null || true
+				# find -L "$OUTDIR" -type f -name "$b*.sorted.bam" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .sorted.bam).bam"' bash {} \; &> /dev/null || true
 				find -L "$OUTDIR" -type f -name "$b*.*.gz" -exec bash -c '[[ -s "$1" ]] && rm -f "$(dirname "$1")/$(basename "$1" .gz)"' bash {} \; &> /dev/null || true
 			done
 		}
@@ -42,9 +42,7 @@ CMD="$(basename "$0") $*"
 THREADS=$(grep -cF processor /proc/cpuinfo)
 MAXMEMORY=$(grep -F MemTotal /proc/meminfo | awk '{printf("%d",$2/1024*0.95)}')
 MEMORY=20000
-[[ MTHREADS=$((MAXMEMORY/MEMORY)) -gt $THREADS ]] && MTHREADS=$THREADS
-BASHBONE_ERROR="too less memory available ($MAXMEMORY)"
-[[ $MTHREADS -eq 0 ]] && false
+MTHREADS=$((MAXMEMORY/MEMORY))
 VERBOSITY=0
 OUTDIR="$PWD/results"
 TMPDIR="${TMPDIR:-$OUTDIR}"
@@ -54,12 +52,23 @@ BASHBONE_ERROR="parameterization issue"
 options::parse "$@"
 bashbone -c
 
-BASHBONE_ERROR="cannot access $OUTDIR"
-mkdir -p "$OUTDIR"
-OUTDIR="$(realpath -se "$OUTDIR")"
+MTHREADS=$((MAXMEMORY/MEMORY))
+[[ $MTHREADS -gt $THREADS ]] && MTHREADS=$THREADS
+BASHBONE_ERROR="too less memory available ($MAXMEMORY)"
+[[ $MTHREADS -ne 0 ]]
+# check for varscan and vardict
+BASHBONE_ERROR="too less memory per thread available ($((MAXMEMORY/THREADS))) < 3072Mb"
+[[ $((THREADS*3072)) -lt $MAXMEMORY ]]
+
 [[ ! $LOG ]] && LOG="$OUTDIR/run.log"
 BASHBONE_ERROR="cannot access $LOG"
 mkdir -p "$(dirname "$LOG")"
+commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -i "$LOG"
+LOG="$(realpath -se "$LOG")"
+
+BASHBONE_ERROR="cannot access $OUTDIR"
+mkdir -p "$OUTDIR"
+OUTDIR="$(realpath -se "$OUTDIR")"
 
 BASHBONE_ERROR="cannot access $TMPDIR"
 if [[ $PREVIOUSTMPDIR ]]; then
@@ -100,7 +109,10 @@ if [[ $DBSNP ]]; then
 	BASHBONE_ERROR="dbSNP file does not exists $DBSNP"
 	[[ -s "$DBSNP" ]]
 else
-	if [[ ! $DBSNP ]]; then
+	if [[ -e "$GENOME.dbSNP.vcf.gz" ]]; then
+		DBSNP="$GENOME.dbSNP.vcf.gz"
+		commander::warn "using dbSNP file $DBSNP"
+	else
 		commander::warn "dbSNP file missing. proceeding without dbSNP file"
 		NOdbsnp=true
 	fi
@@ -110,7 +122,10 @@ if [[ $PONDB ]]; then
 	BASHBONE_ERROR="pon file does not exists $PONDB"
 	[[ -s "$PONDB" ]]
 else
-	if [[ ! $PONDB ]]; then
+	if [[ -e "$GENOME.PON.vcf.gz" ]]; then
+		PONDB="$GENOME.PON.vcf.gz"
+		commander::warn "using pon file $DBSNP"
+	else
 		commander::warn "pon file missing. proceeding without pon file"
 		NOpon=true
 	fi
@@ -137,7 +152,6 @@ if [[ $FASTQ3 ]]; then
 	NOrmd=false
 fi
 
-commander::printinfo "muvac $VERSION utilizing bashbone $BASHBONE_VERSION started with command: $CMD" | tee -i "$LOG"
 commander::printinfo "temporary files go to: $HOSTNAME:$TMPDIR" | tee -ia "$LOG"
 commander::printinfo "date: $(date)" | tee -ia "$LOG"
 x=$(ulimit -Hn)
@@ -160,11 +174,5 @@ else
 	fi
 fi
 unset BASHBONE_ERROR
-
-${Smd5:=false} || {
-	commander::printinfo "finally updating genome and annotation md5 sums" >> "$LOG"
-	thismd5genome=$(md5sum "$GENOME" | cut -d ' ' -f 1)
-	[[ "$md5genome" != "$thismd5genome" ]] && sed -i "s/md5genome=.*/md5genome=$thismd5genome/" "$GENOME.md5.sh"
-}
 
 exit 0

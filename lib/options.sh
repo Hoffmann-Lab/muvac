@@ -25,10 +25,9 @@ function options::usage(){
 		-l       | --log [path]               : output directory. default: $OUTDIR/run.log
 		-tmp     | --tmp                      : temporary directory. default: ${TMPDIR:-/tmp}/muvac.XXXXXXXXXX
 		                                        NOTE: respects TMPDIR environment variable
-		-r       | --remove                   : remove temporary and unnecessary files upon successful termination
-		-rr      | --remove-remove            : remove temporary and unnecessary files upon termination
+		-k       | --keep                     : keep temporary and unnecessary files
 		-t       | --threads [value]          : number of threads. default: $THREADS
-		-xmem    | --max-memory [value]       : total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
+		-xmem    | --max-memory [value]       : fraction or total amount of allocatable memory in MB. default: $MAXMEMORY MB i.e. currently available memory
 		-mem     | --memory [value]           : allocatable memory per instance of memory greedy tools in MB. defines internal number of parallel instances
 		                                        default: $MEMORY which allows for $MTHREADS instances and $MTHREADS SAM/BAM slices according to -xmem
 		                                        NOTE: needs to be raised in case of GCThreads, HeapSize or OutOfMemory errors
@@ -51,7 +50,7 @@ function options::usage(){
 		                                        NOTE: implies -no-call except for Mutect2
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-s       | --snp [path]               : genome matching dbSNP, compressed and tabix indexed
+		-s       | --snp [path]               : genome matching dbSNP as additional post-filter. compressed and tabix indexed
 		-1       | --fq1 [path,..]            : fastq input. single or first mate. comma separated
 		-2       | --fq2 [path,..]            : fastq input. mate pair. comma separated
 		-3       | --fq3 [path,..]            : fastq input. UMI sequences. comma separated
@@ -67,7 +66,7 @@ function options::usage(){
 		-rrm     | --rrnafilter               : enables rRNA filter
 		-no-map  | --no-mapping               : disables read alignment and downstream analyses
 		-d       | --distance                 : maximum read alignment edit distance in %. default: 5
-		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 200000
+		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 1000
 		-split   | --split                    : enables split read mapping and afterwards split alignments by N-cigar strings to call variants from RNA-Seq data
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
@@ -99,7 +98,7 @@ function options::usage(){
 		SOMATIC OPTIONS
 		-g       | --genome [path]            : genome fasta input. without, only preprocessing is performed
 		                                        NOTE: no fasta file implies -no-map
-		-s       | --snp [path]               : genome matching dbSNP, compressed and tabix indexed
+		-s       | --snp [path]               : genome matching dbSNP as additional post-filter. compressed and tabix indexed
 		-p       | --pon [path]               : genome panel of normals input
 		-n1      | --normalfq1 [path,..]      : normal fastq input. single or first mate. comma separated
 		-n2      | --normalfq2 [path,..]      : normal fastq input. mate pair. comma separated
@@ -119,7 +118,7 @@ function options::usage(){
 		-rrm     | --rrnafilter               : enables rRNA filter
 		-no-map  | --no-mapping               : disables read alignment and downstream analyses
 		-d       | --distance                 : maximum read alignment edit distance in %. default: 5
-		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 200000
+		-i       | --insertsize               : maximum allowed insert for aligning mate pairs. default: 1000
 		-split   | --split                    : enables split read mapping and afterwards split alignments by N-cigar strings to call variants from RNA-Seq data
 		-no-sege | --no-segemehl              : disables mapping by segemehl
 		-no-star | --no-star                  : disables mapping by STAR
@@ -149,30 +148,21 @@ function options::usage(){
 
 
 		ADDITIONAL INFORMATION
-		Chromosome order for all input files (genome, annotation, dbsnp, pon, gnomad, ..) must be identical.
-	    If possible, pleas provide them in karyotypic order and following naming schema: chrM,chr1,chr2,..,chrX,chrY
+		Chromosome order for all input files must be identical. (genome, annotation, dbSNP, PON, gnomAD, ExAC, ..)
+	    If possible, provide them in karyotypic order and the following naming schema: chrM,chr1,chr2,..,chrX,chrY
 
-		To obtain comprehensive panel of normals, small common and full gnomAD/Exac population variants with allele frequencies visit
-		https://gatk.broadinstitute.org/hc/en-us/articles/360035890811
-		-> for hg38: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
-		-> for hg19: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-b37/
-		After download, place the gnomAD/Exac vcf and tbi index files next to your genome fasta file.
-	    Rename gnomad/exac according to your genome fasta file and add the following suffixes
-		<genome.fa>.small_common.vcf.gz
-	    <genome.fa>.small_common.vcf.gz.tbi
-		<genome.fa>.af_only_gnomad.vcf.gz
-	    <genome.fa>.af_only_gnomad.vcf.gz.tbi
+	    Following GATK best practices, germline resoures with allele frequencies (e.g. gnomAD) and/or common variants (e.g. ExAC) can be supplied.
+	    See https://gatk.broadinstitute.org/hc/en-us/articles/360035890811
+	    Therefore, download and place the bgzip compressed vcf gz files and tabix tbi index files next to your genome fasta file.
+		<genome.fa>.ExAC_common.vcf.gz (for contamination inference during somatic variant calling)
+		<genome.fa>.gnomAD_with_AF.vcf.gz (as germline-resource for somatic variant calling)
+	   	<genome.fa>.InDel_gold.vcf.gz (proximity regions to exclude from base recalibration)
 
-		To obtain dbSNP common variants vcf and tbi index along with a matching genome and annotation use
-	    either the supplied dlgenome.sh script
-	    or visit
-		https://ftp.ncbi.nlm.nih.gov/snp/organisms
-		-> for hg38: https://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF
-		or download 1000genomes common variants, dbSNP by extraction from chromosomal vcf files respectively via
-	    http://ftp.ensembl.org/pub/current_variation/vcf
-		-> for hg38: ftp://ftp.ensembl.org/pub/current_variation/vcf/homo_sapiens
-		-> for hg19: ftp://ftp.ensembl.org/pub/grch37/current/variation/vcf/homo_sapiens
+	   	If present, the following files will be used unless specified otherwise via muvac options above
+	    <genome.fa>.dbSNP.vcf.gz (proximity regions to exclude from base recalibration and to filter called variants)
+	    <genome.fa>.PON.vcf.gz (panel of normal observed sites for somatic variant calling)
 
+		To obtain human or mouse genomes along with recent dbSNP and GATK bundles, use the supplied dlgenome.sh script.
 
 		REFERENCES
 		(c) Konstantin Riege
@@ -191,7 +181,7 @@ function options::developer(){
 		fqual : input quality metrics
 		trim  : trimming
 		clip  : adapter clipping (& simple trimming)
-		pclip : poly- mono-and di-nucleotide clipping
+		pclip : poly-mono-nucleotide clipping
 		cor   : raw read correction
 		rrm   : rRNA filtering
 		sege  : Segemehl mapping
@@ -203,12 +193,11 @@ function options::developer(){
 		rg    : read group modification
 		rmd   : removing duplicates
 		cmo   : clipping mate overlaps
-		stats : proprocessing and mapping statistics
+		stats : fastq preprocessing and mapping statistics
 		reo   : bam reordering according to genome
 		nsplit: splitting split-read alignments
 		laln  : left alignment
 		bqsr  : BQSRecalibration
-		idx   : intermediate and final bam indexing
 		pon   : panel of normals
 		pondb : panel of normals database
 		gatk  : haplotypecaller/mutect
@@ -236,12 +225,11 @@ function options::checkopt(){
 		-redo     | --redo) skipredo=true; arg=true; options::redo "$2";;
 
 		-tmp      | --tmp) arg=true; TMPDIR="$2";;
-		-r        | --remove) CLEANUP=true;;
-		-rr       | --remove-remove) FORCECLEANUP=true;;
+		-k        | --keep) CLEANUP=false;;
 		-v        | --verbosity) arg=true; VERBOSITY=$2;;
 		-t        | --threads) arg=true; THREADS=$2;;
 		-mem      | --memory) arg=true; MEMORY=$2;;
-		-xmem     | --max-memory) arg=true; MAXMEMORY=$2;;
+		-xmem     | --max-memory) arg=true; [[ ${2%.*} -ge 1 ]] && MAXMEMORY=${2%.*} || MAXMEMORY=$(grep -F MemTotal /proc/meminfo | awk -v i=$2 '{printf("%d",$2/1024*0.95*i)}');;
 
 		-x        | --index) INDEX=true;;
 		-g        | --genome) arg=true; GENOME="$2";;
@@ -268,7 +256,7 @@ function options::checkopt(){
 		-no-qual  | --no-qualityanalysis) NOqual=true;;
 		-no-trim  | --no-trimming) NOtrim=true;;
 		-no-clip  | --no-clipping) NOclip=true;;
-		-pclip    | --polyntclipping) nopclip=false;;
+		-pclip    | --polyntclipping) NOpclip=false;;
 		-cor      | --correction) NOcor=false;;
 		-rrm      | --rrnafilter) NOrrm=false;;
 		-no-sege  | --no-segemehl) NOsege=true;;
@@ -318,7 +306,7 @@ function options::checkopt(){
 function options::resume(){
 	local s enable=false
 	# don't Smd5, Sslice !
-	for s in fqual trim clip pclip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip pclip cor rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -redo, do skip
 		$enable || [[ "$1" == "$s" ]] && {
 			enable=true
@@ -332,7 +320,7 @@ function options::skip(){
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
 	for x in "${mapdata[@]}"; do
-		for s in md5 fqual trim clip pclip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in md5 fqual trim clip pclip cor rrm sege star bwa mqual uniq sort slice addrg rmd cmo stats reo nsplit laln bqsr pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=true"
 		done
 	done
@@ -342,11 +330,11 @@ function options::redo(){
 	local x s
 	declare -a mapdata
 	mapfile -t -d ',' mapdata < <(printf '%s' "$1")
-	for s in fqual trim clip cor pclip rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+	for s in fqual trim clip cor pclip rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr pon pondb gatk bt fb vs vd pp; do
 		eval "\${SKIP$s:=true}" # unless SKIP$s already set to false by -resume, do skip
 	done
 	for x in "${mapdata[@]}"; do
-		for s in fqual trim clip cor pclip rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr idx pon pondb gatk bt fb vs vd pp; do
+		for s in fqual trim clip cor pclip rrm sege star bwa mqual uniq sort addrg rmd cmo stats reo nsplit laln bqsr pon pondb gatk bt fb vs vd pp; do
 			[[ "$x" == "$s" ]] && eval "SKIP$s=false"
 		done
 	done
