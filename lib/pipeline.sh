@@ -96,25 +96,6 @@ function pipeline::_preprocess(){
 				-2 FASTQ2
 		}
 
-		${NOpclip:=true} || {
-			preprocess::rmpolynt \
-				-S ${NOpclip:=true} \
-				-s ${SKIPpclip:=false} \
-				-t $THREADS \
-				-o "$OUTDIR/polyntclipped" \
-				-1 FASTQ1 \
-				-2 FASTQ2
-			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/polyntclipped" -1 FASTQ1 -2 FASTQ2
-			preprocess::fastqc \
-				-S ${NOqual:=false} \
-				-s ${SKIPpclip:=false} \
-				-t $THREADS \
-				-M $MAXMEMORY \
-				-o "$OUTDIR/qualities/polyntclipped" \
-				-1 FASTQ1 \
-				-2 FASTQ2
-		}
-
 		if [[ $ADAPTER1 ]]; then
 			${NOclip:=false} || {
 				preprocess::cutadapt \
@@ -137,6 +118,25 @@ function pipeline::_preprocess(){
 					-2 FASTQ2
 			}
 		fi
+
+		${NOpclip:=true} || {
+			preprocess::rmpolynt \
+				-S ${NOpclip:=true} \
+				-s ${SKIPpclip:=false} \
+				-t $THREADS \
+				-o "$OUTDIR/polyntclipped" \
+				-1 FASTQ1 \
+				-2 FASTQ2
+			preprocess::add4stats -r qualdirs -a "$OUTDIR/qualities/polyntclipped" -1 FASTQ1 -2 FASTQ2
+			preprocess::fastqc \
+				-S ${NOqual:=false} \
+				-s ${SKIPpclip:=false} \
+				-t $THREADS \
+				-M $MAXMEMORY \
+				-o "$OUTDIR/qualities/polyntclipped" \
+				-1 FASTQ1 \
+				-2 FASTQ2
+		}
 
 		preprocess::rcorrector \
 			-S ${NOcor:=true} \
@@ -190,7 +190,7 @@ function pipeline::_mapping(){
 			-o "$OUTDIR/mapped" \
 			-t $THREADS \
 			-a $((100-DISTANCE)) \
-			-i ${INSERTSIZE:=200000} \
+			-i ${INSERTSIZE:=1000} \
 			-n ${NOsplitreads:=true} \
 			-g "$GENOME" \
 			-x "$GENOME.segemehl.idx" \
@@ -205,7 +205,7 @@ function pipeline::_mapping(){
 			-o "$OUTDIR/mapped" \
 			-t $THREADS \
 			-a $((100-DISTANCE)) \
-			-i ${INSERTSIZE:=200000} \
+			-i ${INSERTSIZE:=1000} \
 			-n ${NOsplitreads:=true} \
 			-g "$GENOME" \
 			-x "$GENOME.star.idx" \
@@ -245,6 +245,7 @@ function pipeline::_mapping(){
 		-s ${SKIPuniq:=false} \
 		-j uniqify \
 		-t $THREADS \
+		-M $MAXMEMORY \
 		-o "$OUTDIR/mapped" \
 		-r mapper
 	! ${NOuniq:=false} && ${NOsort:=false} && {
@@ -261,13 +262,7 @@ function pipeline::_mapping(){
 		-s ${SKIPsort:=false} \
 		-j sort \
 		-t "$THREADS" \
-		-o "$OUTDIR/mapped" \
-		-r mapper
-	alignment::postprocess \
-		-S ${NOsort:=false} \
-		-s ${SKIPsort:=false} \
-		-j index \
-		-t $THREADS \
+		-M $MAXMEMORY \
 		-o "$OUTDIR/mapped" \
 		-r mapper
 
@@ -302,13 +297,6 @@ function pipeline::germline(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOaddrg:=false} \
-		-s ${SKIPaddrg:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -323,13 +311,6 @@ function pipeline::germline(){
 			-c slicesinfo \
 			-x "$REGEX" \
 			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOrmd:=false} \
-			-s ${SKIPrmd:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -339,30 +320,16 @@ function pipeline::germline(){
 	}
 
 	pipeline::_slice ${NOcmo:=false} ${SKIPcmo:=false}
-	${NOcmo:=false} || {
-		alignment::clipmateoverlaps \
-			-S ${NOcmo:=false} \
-			-s ${SKIPcmo:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-M $MAXMEMORY \
-			-r mapper \
-			-c slicesinfo \
-			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOcmo:=false} \
-			-s ${SKIPcmo:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
-		alignment::add4stats -r mapper
-		alignment::bamqc \
-			-S ${NOqual:=false} \
-			-s ${SKIPcmo:=false} \
-			-t $THREADS \
-			-r mapper
-	}
+	alignment::clipmateoverlaps \
+		-S ${NOcmo:=false} \
+		-s ${SKIPcmo:=false} \
+		-t $THREADS \
+		-m $MEMORY \
+		-M $MAXMEMORY \
+		-r mapper \
+		-c slicesinfo \
+		-o "$OUTDIR/mapped" \
+		-u
 
 	alignment::qcstats \
 		-S ${NOstats:=false} \
@@ -382,13 +349,6 @@ function pipeline::germline(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOreo:=true} \
-		-s ${SKIPreo:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	${NOsplitreads:=true} || {
 		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
@@ -402,13 +362,6 @@ function pipeline::germline(){
 			-r mapper \
 			-c slicesinfo \
 			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOnsplit:=false} \
-			-s ${SKIPnsplit:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
 	}
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
@@ -422,13 +375,6 @@ function pipeline::germline(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOlaln:=false} \
-		-s ${SKIPlaln:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
 	alignment::bqsr \
@@ -442,13 +388,6 @@ function pipeline::germline(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NObqsr:=false} \
-		-s ${SKIPbqsr:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	${NOpon:=true} || {
 		pipeline::_slice ${NOpon:=true} ${SKIPpon:=false}
@@ -562,13 +501,6 @@ function pipeline::somatic(){
 		-2 TIDX \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOaddrg:=false} \
-		-s ${SKIPaddrg:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	pipeline::_slice ${NOrmd:=false} ${SKIPrmd:=false}
 	${NOrmd:=false} || {
@@ -583,13 +515,6 @@ function pipeline::somatic(){
 			-c slicesinfo \
 			-x "$REGEX" \
 			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOrmd:=false} \
-			-s ${SKIPrmd:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
 		alignment::add4stats -r mapper
 		alignment::bamqc \
 			-S ${NOqual:=false} \
@@ -599,30 +524,16 @@ function pipeline::somatic(){
 	}
 
 	pipeline::_slice ${NOcmo:=false} ${SKIPcmo:=false}
-	${NOcmo:=false} || {
-		alignment::clipmateoverlaps \
-			-S ${NOcmo:=false} \
-			-s ${SKIPcmo:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-M $MAXMEMORY \
-			-r mapper \
-			-c slicesinfo \
-			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOcmo:=false} \
-			-s ${SKIPcmo:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
-		alignment::add4stats -r mapper
-		alignment::bamqc \
-			-S ${NOqual:=false} \
-			-s ${SKIPcmo:=false} \
-			-t $THREADS \
-			-r mapper
-	}
+	alignment::clipmateoverlaps \
+		-S ${NOcmo:=false} \
+		-s ${SKIPcmo:=false} \
+		-t $THREADS \
+		-m $MEMORY \
+		-M $MAXMEMORY \
+		-r mapper \
+		-c slicesinfo \
+		-o "$OUTDIR/mapped" \
+		-u
 
 	alignment::qcstats \
 		-S ${NOstats:=false} \
@@ -642,34 +553,18 @@ function pipeline::somatic(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOreo:=true} \
-		-s ${SKIPreo:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
-	${NOsplitreads:=true} || {
-		pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
-		alignment::splitncigar \
-			-S ${NOnsplit:=false} \
-			-s ${SKIPnsplit:=false} \
-			-t $THREADS \
-			-m $MEMORY \
-			-M $MAXMEMORY \
-			-g "$GENOME" \
-			-r mapper \
-			-c slicesinfo \
-			-o "$OUTDIR/mapped"
-		alignment::postprocess \
-			-S ${NOnsplit:=false} \
-			-s ${SKIPnsplit:=false} \
-			-j index \
-			-t $THREADS \
-			-o "$OUTDIR/mapped" \
-			-r mapper
-	}
+	pipeline::_slice ${NOnsplit:=true} ${SKIPnsplit:=false}
+	alignment::splitncigar \
+		-S ${NOnsplit:=false} \
+		-s ${SKIPnsplit:=false} \
+		-t $THREADS \
+		-m $MEMORY \
+		-M $MAXMEMORY \
+		-g "$GENOME" \
+		-r mapper \
+		-c slicesinfo \
+		-o "$OUTDIR/mapped"
 
 	pipeline::_slice ${NOlaln:=false} ${SKIPlaln:=false}
 	alignment::leftalign \
@@ -682,13 +577,6 @@ function pipeline::somatic(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NOlaln:=false} \
-		-s ${SKIPlaln:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	pipeline::_slice ${NObqsr:=false} ${SKIPbqsr:=false}
 	alignment::bqsr \
@@ -702,13 +590,6 @@ function pipeline::somatic(){
 		-r mapper \
 		-c slicesinfo \
 		-o "$OUTDIR/mapped"
-	alignment::postprocess \
-		-S ${NObqsr:=false} \
-		-s ${SKIPbqsr:=false} \
-		-j index \
-		-t $THREADS \
-		-o "$OUTDIR/mapped" \
-		-r mapper
 
 	pipeline::_slice ${NOgatk:=false} ${SKIPgatk:=false}
 	variants::mutect \
