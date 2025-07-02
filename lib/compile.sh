@@ -28,3 +28,9 @@ function compile::bashbone(){
 
 	return 0
 }
+
+function compile::muvac(){
+	compile::bashbone "$@"
+
+	return 0
+}
