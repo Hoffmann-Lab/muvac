@@ -76,7 +76,7 @@ if [[ $PREVIOUSTMPDIR ]]; then
 else
 	mkdir -p "$TMPDIR"
 	TMPDIR="$(realpath -se "$TMPDIR")"
-	TMPDIR="$(mktemp -d -p "$TMPDIR" muvac.XXXXXXXXXX)"
+	TMPDIR="$(command mktemp -d -p "$TMPDIR" muvac.XXXXXXXXXX)"
 fi
 CLEANUP_TMPDIR="$TMPDIR"
 
